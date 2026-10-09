@@ -11,7 +11,8 @@ import {
   AlertCircle,
   X,
   RefreshCw,
-  HelpCircle
+  HelpCircle,
+  CalendarDays
 } from 'lucide-react';
 
 interface TrabajadorItem {
@@ -47,11 +48,13 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
   const [idEditando, setIdEditando] = useState<number | null>(null);
   const [nombres, setNombres] = useState('');
   const [area, setArea] = useState('Taller Carpintería Principal');
-  const [fechaPrimerDescanso, setFechaPrimerDescanso] = useState('');
+  
+  // FECHA DE INICIO DE TRABAJO (En lugar de descanso)
+  const [fechaInicioTrabajo, setFechaInicioTrabajo] = useState('');
   
   // Parámetros de régimen
-  const [diasDescanso, setDiasDescanso] = useState<number>(10);
   const [diasTrabajo, setDiasTrabajo] = useState<number>(20);
+  const [diasDescanso, setDiasDescanso] = useState<number>(10);
 
   const [proyectando2027, setProyectando2027] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -86,11 +89,31 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
     setIdEditando(null);
     setNombres('');
     setArea('Taller Carpintería Principal');
-    setFechaPrimerDescanso('');
-    setDiasDescanso(10);
+    setFechaInicioTrabajo('');
     setDiasTrabajo(20);
+    setDiasDescanso(10);
     setMensajeError(null);
   };
+
+  // Cálculo de vista previa para feedback inmediato al usuario
+  const calcularPrimerDescansoPreview = () => {
+    if (!fechaInicioTrabajo) return null;
+    const base = new Date(`${fechaInicioTrabajo}T00:00:00.000Z`);
+    // Fin de trabajo = base + (diasTrabajo - 1)
+    const finTrabajo = new Date(base.getTime() + (diasTrabajo - 1) * 24 * 60 * 60 * 1000);
+    // Inicio descanso = base + diasTrabajo
+    const inicioDescanso = new Date(base.getTime() + diasTrabajo * 24 * 60 * 60 * 1000);
+    // Fin descanso = inicioDescanso + (diasDescanso - 1)
+    const finDescanso = new Date(inicioDescanso.getTime() + (diasDescanso - 1) * 24 * 60 * 60 * 1000);
+
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
+    return {
+      trabajo: `${fmt(base)} al ${fmt(finTrabajo)}`,
+      descanso: `${fmt(inicioDescanso)} al ${fmt(finDescanso)}`,
+    };
+  };
+
+  const preview = calcularPrimerDescansoPreview();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,14 +144,14 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
           body: JSON.stringify({
             nombres,
             area,
-            fechaPrimerDescanso: fechaPrimerDescanso || null,
-            diasDescanso,
+            fechaInicioTrabajo: fechaInicioTrabajo || null,
             diasTrabajo,
+            diasDescanso,
           }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        setMensajeExito(`Colaborador creado exitosamente con régimen ${diasTrabajo}x${diasDescanso} calculado automáticamente para todo el año.`);
+        setMensajeExito(`Colaborador creado. Trabajará ${diasTrabajo} días y sus descansos de ${diasDescanso} días se calcularon para todo el año.`);
       }
 
       limpiarFormulario();
@@ -170,7 +193,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
     setIdEditando(t.id);
     setNombres(t.nombres);
     setArea(t.area);
-    setFechaPrimerDescanso('');
+    setFechaInicioTrabajo('');
   };
 
   const handleProyectar2027 = async () => {
@@ -215,9 +238,9 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
               <Users className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-xl font-bold tracking-tight">Gestión de Personal & Configuración de Régimen</h3>
+              <h3 className="text-xl font-bold tracking-tight">Gestión de Personal & Régimen de Turnos</h3>
               <p className="text-xs text-slate-300">
-                Altas, bajas, cálculo automático de descansos (ej. 20x10, 14x7) y proyección 2026/2027
+                Ingresa la fecha de inicio de labores y el sistema calcula los descansos automáticamente
               </p>
             </div>
           </div>
@@ -260,7 +283,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center space-x-2">
                 <UserPlus className="w-4 h-4 text-amber-600" />
-                <span>{modoEdicion ? 'Modificar Datos de Colaborador' : 'Registrar Nuevo Colaborador & Proyectar Régimen'}</span>
+                <span>{modoEdicion ? 'Modificar Datos de Colaborador' : 'Registrar Nuevo Colaborador & Calcular Turnos'}</span>
               </h4>
               {modoEdicion && (
                 <button
@@ -306,17 +329,18 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
               {!modoEdicion && (
                 <>
                   <div>
-                    <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
-                      Fecha Primer Descanso (FI)
+                    <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1 flex items-center space-x-1">
+                      <CalendarDays className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Fecha de Inicio de Trabajo</span>
                     </label>
                     <input
                       type="date"
-                      value={fechaPrimerDescanso}
-                      onChange={(e) => setFechaPrimerDescanso(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                      value={fechaInicioTrabajo}
+                      onChange={(e) => setFechaInicioTrabajo(e.target.value)}
+                      className="w-full rounded-xl border border-amber-300 bg-amber-50/40 px-3 py-2 text-xs text-slate-900 font-bold focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                     />
-                    <span className="text-[10px] text-slate-400">
-                      Fecha en que inicia su primer período libre (DL).
+                    <span className="text-[10px] text-slate-500 block mt-1">
+                      Día en que el trabajador sube a mina o entra a laborar.
                     </span>
                   </div>
 
@@ -324,8 +348,8 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
                   <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold uppercase text-slate-700 flex items-center space-x-1">
-                        <span>Régimen Minero</span>
-                        <HelpCircle className="w-3.5 h-3.5 text-slate-400" title="Calcula automáticamente todos los descansos del año hasta el 31 de Diciembre." />
+                        <span>Régimen Operativo</span>
+                        <HelpCircle className="w-3.5 h-3.5 text-slate-400" title="Trabaja X días y luego descansa Y días." />
                       </span>
                       <span className="text-[11px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-900">
                         {diasTrabajo} días Trabajo x {diasDescanso} días Descanso
@@ -333,6 +357,18 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Días de Trabajo (Labor)</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={60}
+                          value={diasTrabajo}
+                          onChange={(e) => setDiasTrabajo(Number(e.target.value))}
+                          className="w-full rounded-lg border border-slate-200 p-1.5 text-xs text-center font-bold text-slate-800"
+                        />
+                      </div>
+
                       <div>
                         <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Días Descanso (DL)</label>
                         <input
@@ -344,22 +380,14 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
                           className="w-full rounded-lg border border-slate-200 p-1.5 text-xs text-center font-bold text-purple-700"
                         />
                       </div>
-
-                      <div>
-                        <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Días de Trabajo</label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={60}
-                          value={diasTrabajo}
-                          onChange={(e) => setDiasTrabajo(Number(e.target.value))}
-                          className="w-full rounded-lg border border-slate-200 p-1.5 text-xs text-center font-bold text-slate-700"
-                        />
-                      </div>
                     </div>
-                    <p className="text-[10px] text-emerald-700 font-medium">
-                      ✔ Se calcularán y cubrirán automáticamente todos los meses del año (Ene - Dic).
-                    </p>
+
+                    {preview && (
+                      <div className="mt-1 p-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px] space-y-0.5 text-slate-600">
+                        <div>🔨 <b>1er Ciclo Laboral:</b> {preview.trabajo} ({diasTrabajo} días)</div>
+                        <div className="text-purple-700 font-bold">🏖 <b>1er Descanso (DL):</b> {preview.descanso} ({diasDescanso} días)</div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -370,7 +398,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
                 type="submit"
                 className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-sm transition"
               >
-                <span>{modoEdicion ? 'Actualizar Colaborador' : 'Guardar y Calcular Todo el Año'}</span>
+                <span>{modoEdicion ? 'Actualizar Colaborador' : 'Guardar y Calcular Cronograma Completo'}</span>
               </button>
             </div>
           </form>

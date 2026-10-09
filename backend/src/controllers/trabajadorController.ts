@@ -31,7 +31,7 @@ export class TrabajadorController {
       const {
         nombres,
         area,
-        fechaPrimerDescanso,
+        fechaInicioTrabajo,
         diasDescanso = 10,
         diasTrabajo = 20,
       } = req.body;
@@ -49,15 +49,21 @@ export class TrabajadorController {
         },
       });
 
-      // Si se provee la fecha del primer descanso, calcular automáticamente para TODO el año calendario
-      if (fechaPrimerDescanso) {
+      // Cálculo a partir de FECHA DE INICIO DE TRABAJO
+      // Ejemplo: Entra a trabajar el 01/01/2026.
+      // Trabaja 20 días (del 01 al 20 de enero).
+      // Su descanso inicia el día 21: fechaInicioTrabajo + diasTrabajo
+      if (fechaInicioTrabajo) {
         const cantDescanso = parseInt(diasDescanso) || 10;
         const cantTrabajo = parseInt(diasTrabajo) || 20;
 
-        let fi = new Date(`${fechaPrimerDescanso}T00:00:00.000Z`);
-        const anioLimite = fi.getUTCFullYear();
+        const inicioTrabajo = new Date(`${fechaInicioTrabajo}T00:00:00.000Z`);
+        const anioLimite = inicioTrabajo.getUTCFullYear();
 
-        // Generar mientras la fecha siga dentro del año correspondiente
+        // Primer descanso arranca tras cumplir los primeros días de trabajo
+        let fi = new Date(inicioTrabajo.getTime() + cantTrabajo * 24 * 60 * 60 * 1000);
+
+        // Proyectar todos los descansos dentro del año calendario
         while (fi.getUTCFullYear() <= anioLimite) {
           const ff = new Date(fi.getTime() + (cantDescanso - 1) * 24 * 60 * 60 * 1000);
 
@@ -70,7 +76,7 @@ export class TrabajadorController {
             },
           });
 
-          // Próximo descanso: fecha fin + días de trabajo posteriores + 1 día
+          // Siguiente descanso: fin descanso anterior + 1 día + días de trabajo
           fi = new Date(ff.getTime() + (cantTrabajo + 1) * 24 * 60 * 60 * 1000);
         }
       }
@@ -78,7 +84,7 @@ export class TrabajadorController {
       res.status(201).json({
         success: true,
         data: trabajador,
-        message: 'Trabajador registrado y cronograma calculado automáticamente para todo el año.',
+        message: 'Trabajador registrado y cronograma calculado a partir de su inicio laboral.',
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
