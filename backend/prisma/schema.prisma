@@ -1,0 +1,86 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TipoExcepcion {
+  VENTA_DESCANSO
+  PERMISO
+}
+
+enum RolUsuario {
+  ADMIN
+  SUPERVISOR
+  TRABAJADOR
+}
+
+enum EstadoUsuario {
+  PENDIENTE
+  ACTIVO
+  RECHAZADO
+}
+
+model Usuario {
+  id           Int           @id @default(autoincrement())
+  email        String        @unique @db.VarChar(150)
+  password     String        @db.VarChar(255)
+  nombres      String        @db.VarChar(150)
+  rol          RolUsuario    @default(SUPERVISOR)
+  estado       EstadoUsuario @default(PENDIENTE)
+
+  aprobadoEn   DateTime?     @map("aprobado_en")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("usuarios")
+}
+
+model Trabajador {
+  id                   Int                  @id @default(autoincrement())
+  nombres              String               @db.VarChar(150)
+  area                 String               @db.VarChar(100)
+  activo               Boolean              @default(true)
+  descansosProgramados DescansoProgramado[]
+  excepciones          Excepcion[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("trabajadores")
+}
+
+model DescansoProgramado {
+  id           Int        @id @default(autoincrement())
+  trabajadorId Int        @map("trabajador_id")
+  fechaInicio  DateTime   @map("fecha_inicio") @db.Date
+  fechaFin     DateTime   @map("fecha_fin") @db.Date
+  cantidadDias Int        @map("cantidad_dias")
+  trabajador   Trabajador @relation(fields: [trabajadorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([trabajadorId, fechaInicio, fechaFin])
+  @@map("descansos_programados")
+}
+
+model Excepcion {
+  id           Int           @id @default(autoincrement())
+  trabajadorId Int           @map("trabajador_id")
+  fecha        DateTime      @db.Date
+  tipo         TipoExcepcion
+  motivo       String?       @db.VarChar(255)
+  trabajador   Trabajador    @relation(fields: [trabajadorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([trabajadorId, fecha])
+  @@index([fecha, tipo])
+  @@map("excepciones")
+}
