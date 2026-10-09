@@ -22,6 +22,7 @@ app.get('/api/auth/perfil', authMiddleware, AuthController.perfil);
 
 // 2. Programación y Excepciones
 app.get('/api/programacion', ProgramacionController.getGrilla);
+app.get('/api/programacion/bloque-descanso', ProgramacionController.getDetalleBloqueDescanso);
 app.post('/api/excepciones', authMiddleware, ProgramacionController.crearExcepcion);
 app.post('/api/excepciones/rango', authMiddleware, TrabajadorController.registrarExcepcionesRango);
 

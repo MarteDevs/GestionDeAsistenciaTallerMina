@@ -349,7 +349,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold uppercase text-slate-700 flex items-center space-x-1">
                         <span>Régimen Operativo</span>
-                        <HelpCircle className="w-3.5 h-3.5 text-slate-400" title="Trabaja X días y luego descansa Y días." />
+                        <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
                       </span>
                       <span className="text-[11px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-900">
                         {diasTrabajo} días Trabajo x {diasDescanso} días Descanso
