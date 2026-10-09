@@ -34,7 +34,6 @@ export class TrabajadorController {
         fechaPrimerDescanso,
         diasDescanso = 10,
         diasTrabajo = 20,
-        cantidadCiclos = 10,
       } = req.body;
 
       if (!nombres || !area) {
@@ -50,16 +49,16 @@ export class TrabajadorController {
         },
       });
 
-      // Si se provee la fecha del primer descanso, calcular los ciclos proyectados
+      // Si se provee la fecha del primer descanso, calcular automáticamente para TODO el año calendario
       if (fechaPrimerDescanso) {
         const cantDescanso = parseInt(diasDescanso) || 10;
         const cantTrabajo = parseInt(diasTrabajo) || 20;
-        const ciclos = parseInt(cantidadCiclos) || 10;
 
         let fi = new Date(`${fechaPrimerDescanso}T00:00:00.000Z`);
+        const anioLimite = fi.getUTCFullYear();
 
-        for (let i = 0; i < ciclos; i++) {
-          // Fecha fin = fi + (cantDescanso - 1) días
+        // Generar mientras la fecha siga dentro del año correspondiente
+        while (fi.getUTCFullYear() <= anioLimite) {
           const ff = new Date(fi.getTime() + (cantDescanso - 1) * 24 * 60 * 60 * 1000);
 
           await prisma.descansoProgramado.create({
@@ -71,8 +70,7 @@ export class TrabajadorController {
             },
           });
 
-          // Siguiente período de descanso: inicia después de los días de trabajo
-          // Día siguiente a ff + días de trabajo
+          // Próximo descanso: fecha fin + días de trabajo posteriores + 1 día
           fi = new Date(ff.getTime() + (cantTrabajo + 1) * 24 * 60 * 60 * 1000);
         }
       }
@@ -80,7 +78,7 @@ export class TrabajadorController {
       res.status(201).json({
         success: true,
         data: trabajador,
-        message: 'Trabajador registrado y cronograma calculado correctamente.',
+        message: 'Trabajador registrado y cronograma calculado automáticamente para todo el año.',
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
@@ -150,7 +148,6 @@ export class TrabajadorController {
         const ultimoDescanso = t.descansosProgramados[0];
         const cantDiasDescanso = ultimoDescanso.cantidadDias || 10;
         
-        // 20 días de trabajo posteriores al fin del descanso anterior
         let proximaFi = new Date(ultimoDescanso.fechaFin.getTime() + 21 * 24 * 60 * 60 * 1000);
 
         while (proximaFi.getUTCFullYear() <= targetYear) {

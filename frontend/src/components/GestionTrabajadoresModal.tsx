@@ -49,10 +49,9 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
   const [area, setArea] = useState('Taller Carpintería Principal');
   const [fechaPrimerDescanso, setFechaPrimerDescanso] = useState('');
   
-  // Parámetros de ciclo de régimen minero
-  const [diasDescanso, setDiasDescanso] = useState<number>(10); // Ej: 10 días de descanso
-  const [diasTrabajo, setDiasTrabajo] = useState<number>(20);   // Ej: 20 días de trabajo
-  const [cantidadCiclos, setCantidadCiclos] = useState<number>(10); // Repetir 10 u 11 veces en el año
+  // Parámetros de régimen
+  const [diasDescanso, setDiasDescanso] = useState<number>(10);
+  const [diasTrabajo, setDiasTrabajo] = useState<number>(20);
 
   const [proyectando2027, setProyectando2027] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -90,7 +89,6 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
     setFechaPrimerDescanso('');
     setDiasDescanso(10);
     setDiasTrabajo(20);
-    setCantidadCiclos(10);
     setMensajeError(null);
   };
 
@@ -126,12 +124,11 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
             fechaPrimerDescanso: fechaPrimerDescanso || null,
             diasDescanso,
             diasTrabajo,
-            cantidadCiclos,
           }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        setMensajeExito(`Colaborador creado exitosamente con régimen ${diasTrabajo}x${diasDescanso} (${cantidadCiclos} ciclos en el año).`);
+        setMensajeExito(`Colaborador creado exitosamente con régimen ${diasTrabajo}x${diasDescanso} calculado automáticamente para todo el año.`);
       }
 
       limpiarFormulario();
@@ -220,7 +217,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
             <div>
               <h3 className="text-xl font-bold tracking-tight">Gestión de Personal & Configuración de Régimen</h3>
               <p className="text-xs text-slate-300">
-                Altas, bajas, cálculo de días libres (ej. 20x10, 14x7) y proyección de años 2026/2027
+                Altas, bajas, cálculo automático de descansos (ej. 20x10, 14x7) y proyección 2026/2027
               </p>
             </div>
           </div>
@@ -263,7 +260,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center space-x-2">
                 <UserPlus className="w-4 h-4 text-amber-600" />
-                <span>{modoEdicion ? 'Modificar Datos de Colaborador' : 'Registrar Nuevo Colaborador & Calcular Régimen'}</span>
+                <span>{modoEdicion ? 'Modificar Datos de Colaborador' : 'Registrar Nuevo Colaborador & Proyectar Régimen'}</span>
               </h4>
               {modoEdicion && (
                 <button
@@ -319,25 +316,25 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
                       className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                     />
                     <span className="text-[10px] text-slate-400">
-                      Fecha exacta en que inicia su primer período libre (DL)
+                      Fecha en que inicia su primer período libre (DL).
                     </span>
                   </div>
 
-                  {/* Parámetros Claros de Régimen: Días de Descanso vs Trabajo */}
+                  {/* Parámetros de Régimen */}
                   <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold uppercase text-slate-700 flex items-center space-x-1">
-                        <span>Configuración del Régimen</span>
-                        <HelpCircle className="w-3.5 h-3.5 text-slate-400" title="Define cuántos días descansa y cuántos días trabaja consecutivamente." />
+                        <span>Régimen Minero</span>
+                        <HelpCircle className="w-3.5 h-3.5 text-slate-400" title="Calcula automáticamente todos los descansos del año hasta el 31 de Diciembre." />
                       </span>
                       <span className="text-[11px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-900">
-                        Régimen: {diasTrabajo} x {diasDescanso}
+                        {diasTrabajo} días Trabajo x {diasDescanso} días Descanso
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Días Descanso</label>
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Días Descanso (DL)</label>
                         <input
                           type="number"
                           min={1}
@@ -349,7 +346,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
                       </div>
 
                       <div>
-                        <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Días Trabajo</label>
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Días de Trabajo</label>
                         <input
                           type="number"
                           min={1}
@@ -359,19 +356,10 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
                           className="w-full rounded-lg border border-slate-200 p-1.5 text-xs text-center font-bold text-slate-700"
                         />
                       </div>
-
-                      <div>
-                        <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Ciclos / Año</label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={15}
-                          value={cantidadCiclos}
-                          onChange={(e) => setCantidadCiclos(Number(e.target.value))}
-                          className="w-full rounded-lg border border-slate-200 p-1.5 text-xs text-center font-bold text-slate-700"
-                        />
-                      </div>
                     </div>
+                    <p className="text-[10px] text-emerald-700 font-medium">
+                      ✔ Se calcularán y cubrirán automáticamente todos los meses del año (Ene - Dic).
+                    </p>
                   </div>
                 </>
               )}
@@ -382,7 +370,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
                 type="submit"
                 className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-sm transition"
               >
-                <span>{modoEdicion ? 'Actualizar Colaborador' : 'Guardar y Calcular Cronograma Inmutable'}</span>
+                <span>{modoEdicion ? 'Actualizar Colaborador' : 'Guardar y Calcular Todo el Año'}</span>
               </button>
             </div>
           </form>
