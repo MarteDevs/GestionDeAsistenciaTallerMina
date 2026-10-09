@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { ProgramacionService, TipoExcepcion } from '../services/programacionService';
+import { ProgramacionService } from '../services/programacionService';
 
 const prisma = new PrismaClient();
 
 export class TrabajadorController {
-  // Listar todos los trabajadores (activos o inactivos)
   public static async listar(req: Request, res: Response): Promise<void> {
     try {
       const { incluirInactivos } = req.query;
@@ -27,10 +26,16 @@ export class TrabajadorController {
     }
   }
 
-  // Crear trabajador y opcionalmente autogenerar su ciclo 20x10 para el año
   public static async crear(req: Request, res: Response): Promise<void> {
     try {
-      const { nombres, area, fechaPrimerDescanso, cantidadCiclos } = req.body;
+      const {
+        nombres,
+        area,
+        fechaPrimerDescanso,
+        diasDescanso = 10,
+        diasTrabajo = 20,
+        cantidadCiclos = 10,
+      } = req.body;
 
       if (!nombres || !area) {
         res.status(400).json({ success: false, error: 'Nombres y Área son obligatorios.' });
@@ -45,39 +50,43 @@ export class TrabajadorController {
         },
       });
 
-      // Si se provee la fecha del primer descanso, proyectar ciclos 20x10 (ej. 10 descansos al año)
+      // Si se provee la fecha del primer descanso, calcular los ciclos proyectados
       if (fechaPrimerDescanso) {
+        const cantDescanso = parseInt(diasDescanso) || 10;
+        const cantTrabajo = parseInt(diasTrabajo) || 20;
         const ciclos = parseInt(cantidadCiclos) || 10;
+
         let fi = new Date(`${fechaPrimerDescanso}T00:00:00.000Z`);
 
         for (let i = 0; i < ciclos; i++) {
-          const ff = new Date(fi.getTime() + 9 * 24 * 60 * 60 * 1000); // 10 días de descanso
+          // Fecha fin = fi + (cantDescanso - 1) días
+          const ff = new Date(fi.getTime() + (cantDescanso - 1) * 24 * 60 * 60 * 1000);
 
           await prisma.descansoProgramado.create({
             data: {
               trabajadorId: trabajador.id,
               fechaInicio: fi,
               fechaFin: ff,
-              cantidadDias: 10,
+              cantidadDias: cantDescanso,
             },
           });
 
-          // Siguiente ciclo: 10 días descanso + 20 días trabajo = 30 días después
-          fi = new Date(ff.getTime() + 21 * 24 * 60 * 60 * 1000);
+          // Siguiente período de descanso: inicia después de los días de trabajo
+          // Día siguiente a ff + días de trabajo
+          fi = new Date(ff.getTime() + (cantTrabajo + 1) * 24 * 60 * 60 * 1000);
         }
       }
 
       res.status(201).json({
         success: true,
         data: trabajador,
-        message: 'Trabajador registrado y cronograma 20x10 proyectado correctamente.',
+        message: 'Trabajador registrado y cronograma calculado correctamente.',
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
   }
 
-  // Actualizar datos del trabajador
   public static async actualizar(req: Request, res: Response): Promise<void> {
     try {
       const id = parseInt(req.params.id);
@@ -98,7 +107,6 @@ export class TrabajadorController {
     }
   }
 
-  // Dar de baja o activar trabajador
   public static async toggleBaja(req: Request, res: Response): Promise<void> {
     try {
       const id = parseInt(req.params.id);
@@ -119,7 +127,6 @@ export class TrabajadorController {
     }
   }
 
-  // Proyectar ciclos 20x10 para el año siguiente (ej. 2027) basándose en el último descanso de 2026
   public static async proyectarSiguienteAnio(req: Request, res: Response): Promise<void> {
     try {
       const { anioDestino } = req.body;
@@ -141,19 +148,20 @@ export class TrabajadorController {
         if (t.descansosProgramados.length === 0) continue;
 
         const ultimoDescanso = t.descansosProgramados[0];
-        // El siguiente descanso inicia 20 días de trabajo después del fin del anterior (día + 21)
+        const cantDiasDescanso = ultimoDescanso.cantidadDias || 10;
+        
+        // 20 días de trabajo posteriores al fin del descanso anterior
         let proximaFi = new Date(ultimoDescanso.fechaFin.getTime() + 21 * 24 * 60 * 60 * 1000);
 
-        // Generar mientras el año de la fecha de inicio sea menor o igual al año destino
         while (proximaFi.getUTCFullYear() <= targetYear) {
-          const proximaFf = new Date(proximaFi.getTime() + 9 * 24 * 60 * 60 * 1000);
+          const proximaFf = new Date(proximaFi.getTime() + (cantDiasDescanso - 1) * 24 * 60 * 60 * 1000);
 
           await prisma.descansoProgramado.create({
             data: {
               trabajadorId: t.id,
               fechaInicio: proximaFi,
               fechaFin: proximaFf,
-              cantidadDias: 10,
+              cantidadDias: cantDiasDescanso,
             },
           });
           generados++;
@@ -165,14 +173,13 @@ export class TrabajadorController {
       res.json({
         success: true,
         generados,
-        message: `Se han proyectado ${generados} descansos 20x10 para el año ${targetYear} exitosamente.`,
+        message: `Se han proyectado ${generados} descansos para el año ${targetYear} exitosamente.`,
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
   }
 
-  // Registro de excepción en Lote / Rango de días (para vender 5 días de una sola vez)
   public static async registrarExcepcionesRango(req: Request, res: Response): Promise<void> {
     try {
       const { trabajadorId, fechas, tipo, motivo } = req.body;
