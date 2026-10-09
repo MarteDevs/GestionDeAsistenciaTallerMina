@@ -41,6 +41,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
   const { token } = useAuth();
   const [trabajadores, setTrabajadores] = useState<TrabajadorItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   // Formulario
@@ -48,11 +49,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
   const [idEditando, setIdEditando] = useState<number | null>(null);
   const [nombres, setNombres] = useState('');
   const [area, setArea] = useState('Taller Carpintería Principal');
-  
-  // FECHA DE INICIO DE TRABAJO (En lugar de descanso)
   const [fechaInicioTrabajo, setFechaInicioTrabajo] = useState('');
-  
-  // Parámetros de régimen
   const [diasTrabajo, setDiasTrabajo] = useState<number>(20);
   const [diasDescanso, setDiasDescanso] = useState<number>(10);
 
@@ -95,15 +92,11 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
     setMensajeError(null);
   };
 
-  // Cálculo de vista previa para feedback inmediato al usuario
   const calcularPrimerDescansoPreview = () => {
     if (!fechaInicioTrabajo) return null;
     const base = new Date(`${fechaInicioTrabajo}T00:00:00.000Z`);
-    // Fin de trabajo = base + (diasTrabajo - 1)
     const finTrabajo = new Date(base.getTime() + (diasTrabajo - 1) * 24 * 60 * 60 * 1000);
-    // Inicio descanso = base + diasTrabajo
     const inicioDescanso = new Date(base.getTime() + diasTrabajo * 24 * 60 * 60 * 1000);
-    // Fin descanso = inicioDescanso + (diasDescanso - 1)
     const finDescanso = new Date(inicioDescanso.getTime() + (diasDescanso - 1) * 24 * 60 * 60 * 1000);
 
     const fmt = (d: Date) => d.toISOString().split('T')[0];
@@ -120,6 +113,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
     if (!token) return;
     setMensajeError(null);
     setMensajeExito(null);
+    setSubmitting(true);
 
     try {
       if (modoEdicion && idEditando) {
@@ -133,7 +127,15 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        setMensajeExito('Colaborador actualizado correctamente.');
+
+        // Feedback positivo y cierre automático
+        setMensajeExito('Colaborador actualizado exitosamente. Actualizando vista...');
+        onTrabajadoresActualizados();
+
+        setTimeout(() => {
+          limpiarFormulario();
+          onClose();
+        }, 1200);
       } else {
         const res = await fetch('/api/trabajadores', {
           method: 'POST',
@@ -151,14 +153,19 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        setMensajeExito(`Colaborador creado. Trabajará ${diasTrabajo} días y sus descansos de ${diasDescanso} días se calcularon para todo el año.`);
-      }
 
-      limpiarFormulario();
-      fetchTrabajadores();
-      onTrabajadoresActualizados();
+        // Feedback positivo y cierre automático suave para que el usuario vea su nueva fila en la grilla
+        setMensajeExito(`¡Colaborador ${nombres} registrado con éxito! Turnos 20x10 calculados.`);
+        onTrabajadoresActualizados();
+
+        setTimeout(() => {
+          limpiarFormulario();
+          onClose();
+        }, 1300);
+      }
     } catch (err: any) {
       setMensajeError(err.message || 'Error al guardar los datos.');
+      setSubmitting(false);
     }
   };
 
@@ -194,6 +201,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
     setNombres(t.nombres);
     setArea(t.area);
     setFechaInicioTrabajo('');
+    setMensajeExito(null);
   };
 
   const handleProyectar2027 = async () => {
@@ -219,6 +227,10 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
       if (!res.ok) throw new Error(data.error);
       setMensajeExito(data.message);
       onTrabajadoresActualizados();
+
+      setTimeout(() => {
+        onClose();
+      }, 1500);
     } catch (err: any) {
       setMensajeError(err.message || 'Error al proyectar el año 2027.');
     } finally {
@@ -265,8 +277,8 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {mensajeExito && (
-            <div className="flex items-center space-x-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="flex items-center space-x-2 rounded-xl bg-emerald-50 border border-emerald-300 p-4 text-xs font-semibold text-emerald-900 animate-in fade-in shadow-sm">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
               <span>{mensajeExito}</span>
             </div>
           )}
@@ -396,9 +408,10 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
             <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-sm transition"
+                disabled={submitting}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-sm transition disabled:opacity-50"
               >
-                <span>{modoEdicion ? 'Actualizar Colaborador' : 'Guardar y Calcular Cronograma Completo'}</span>
+                <span>{submitting ? 'Guardando y calculando...' : modoEdicion ? 'Actualizar Colaborador' : 'Guardar y Calcular Cronograma Completo'}</span>
               </button>
             </div>
           </form>
