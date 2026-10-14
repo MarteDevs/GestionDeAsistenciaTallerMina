@@ -4,6 +4,7 @@ import { GrillaProgramacion } from './components/GrillaProgramacion';
 import { AuthModal } from './components/AuthModal';
 import { AdminUsuariosModal } from './components/AdminUsuariosModal';
 import { GestionTrabajadoresModal } from './components/GestionTrabajadoresModal';
+import { NotificationBell } from './components/NotificationBell';
 import {
   Wrench,
   LogIn,
@@ -56,6 +57,9 @@ const AppContent: React.FC = () => {
             {/* Auth Buttons / User Profile */}
             {isAuthenticated && usuario ? (
               <div className="flex items-center space-x-2">
+                {/* Notificaciones de Relevos / Turnos */}
+                <NotificationBell />
+
                 {/* Gestión de Personal */}
                 <button
                   onClick={() => setGestionTrabajadoresOpen(true)}

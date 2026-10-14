@@ -5,6 +5,7 @@ import { ProgramacionController } from './controllers/programacionController';
 import { AuthController } from './controllers/authController';
 import { AdminController } from './controllers/adminController';
 import { TrabajadorController } from './controllers/trabajadorController';
+import { NotificacionesController } from './controllers/notificacionesController';
 import { authMiddleware, requireAdmin } from './middlewares/authMiddleware';
 
 dotenv.config();
@@ -36,6 +37,9 @@ app.post('/api/trabajadores/proyectar-anio', authMiddleware, requireAdmin, Traba
 // 4. Administración de Usuarios
 app.get('/api/admin/usuarios', authMiddleware, requireAdmin, AdminController.listarUsuarios);
 app.put('/api/admin/usuarios/:id/estado', authMiddleware, requireAdmin, AdminController.cambiarEstadoUsuario);
+
+// 5. Notificaciones y Próximos Turnos (Web & Android)
+app.get('/api/notificaciones/proximos-turnos', authMiddleware, NotificacionesController.obtenerProximosTurnos);
 
 // Health check
 app.get('/api/health', (_req, res) => {
