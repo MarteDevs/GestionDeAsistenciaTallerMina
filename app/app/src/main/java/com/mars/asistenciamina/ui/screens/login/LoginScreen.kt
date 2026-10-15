@@ -111,19 +111,19 @@ fun LoginScreen(
 
             // Títulos
             Text(
-                text = "TALLER CARPINTERÍA",
+                text = "TALLER MINA",
                 color = Color.White,
-                fontSize = 20.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.sp
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = "Control de Asistencia & Relevos 20x10",
                 color = Slate400,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             )
 
@@ -136,24 +136,26 @@ fun LoginScreen(
                 colors = CardDefaults.cardColors(containerColor = Slate900)
             ) {
                 Column(
-                    modifier = Modifier.padding(22.dp),
+                    modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "Iniciar Sesión",
                         color = Color.White,
-                        fontSize = 17.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    Spacer(modifier = Modifier.height(2.dp))
+
                     Text(
                         text = "Ingresa con tu usuario o correo corporativo",
                         color = Slate400,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 18.dp)
+                            .padding(bottom = 20.dp)
                     )
 
                     // Error Alert
@@ -183,7 +185,7 @@ fun LoginScreen(
                                 Text(
                                     text = state.errorMessage ?: "",
                                     color = Rose500,
-                                    fontSize = 11.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -195,8 +197,8 @@ fun LoginScreen(
                         value = state.identificador,
                         onValueChange = viewModel::onIdentificadorChange,
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Usuario o Correo", fontSize = 12.sp) },
-                        placeholder = { Text("Ej: JORGE", color = Slate400, fontSize = 12.sp) },
+                        label = { Text("Usuario o Correo", fontSize = 13.sp) },
+                        placeholder = { Text("Ej: JORGE", color = Slate400, fontSize = 13.sp) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Person,
@@ -221,15 +223,15 @@ fun LoginScreen(
                         shape = RoundedCornerShape(14.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Campo: Contraseña
                     OutlinedTextField(
                         value = state.password,
                         onValueChange = viewModel::onPasswordChange,
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Contraseña", fontSize = 12.sp) },
-                        placeholder = { Text("••••••••", color = Slate400, fontSize = 12.sp) },
+                        label = { Text("Contraseña", fontSize = 13.sp) },
+                        placeholder = { Text("••••••••", color = Slate400, fontSize = 13.sp) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Lock,
@@ -268,7 +270,7 @@ fun LoginScreen(
                         shape = RoundedCornerShape(14.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(22.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     // Botón Iniciar Sesión
                     Button(
@@ -276,7 +278,7 @@ fun LoginScreen(
                         enabled = !state.isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
+                            .height(52.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Amber500,
@@ -294,7 +296,7 @@ fun LoginScreen(
                         } else {
                             Text(
                                 text = "INGRESAR AL SISTEMA",
-                                fontSize = 13.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 0.5.sp
                             )
@@ -309,9 +311,10 @@ fun LoginScreen(
             Text(
                 text = "Tu sesión permanecerá abierta de forma segura para recibir alertas y notificaciones automáticas de relevos.",
                 color = Slate400,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
+                lineHeight = 17.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 20.dp)
             )
         }
     }

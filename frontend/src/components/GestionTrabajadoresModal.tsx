@@ -48,7 +48,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
   const [modoEdicion, setModoEdicion] = useState(false);
   const [idEditando, setIdEditando] = useState<number | null>(null);
   const [nombres, setNombres] = useState('');
-  const [area, setArea] = useState('Taller Carpintería Principal');
+  const [area, setArea] = useState('Taller Mina');
   const [fechaInicioTrabajo, setFechaInicioTrabajo] = useState('');
   const [diasTrabajo, setDiasTrabajo] = useState<number>(20);
   const [diasDescanso, setDiasDescanso] = useState<number>(10);
@@ -85,7 +85,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
     setModoEdicion(false);
     setIdEditando(null);
     setNombres('');
-    setArea('Taller Carpintería Principal');
+    setArea('Taller Mina');
     setFechaInicioTrabajo('');
     setDiasTrabajo(20);
     setDiasDescanso(10);
@@ -332,9 +332,8 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
                   onChange={(e) => setArea(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                 >
-                  <option value="Taller Carpintería Principal">Taller Carpintería Principal</option>
+                  <option value="Taller Mina">Taller Mina</option>
                   <option value="Carpintería Externa">Carpintería Externa</option>
-                  <option value="Operaciones Especiales">Operaciones Especiales</option>
                 </select>
               </div>
 

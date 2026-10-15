@@ -60,7 +60,7 @@ const AppContent: React.FC = () => {
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="text-sm font-black tracking-tight leading-none text-white">
-                  TALLER CARPINTERÍA
+                  TALLER MINA
                 </h1>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
                   2026 - 2027
@@ -161,7 +161,7 @@ const AppContent: React.FC = () => {
                   <Layers className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-xs font-bold tracking-tight">PROGRAMACIÓN TALLER CARPINTERÍA (RÉGIMEN ATÍPICO 20x10)</h2>
+                  <h2 className="text-xs font-bold tracking-tight">PROGRAMACIÓN TALLER MINA (RÉGIMEN ATÍPICO 20x10)</h2>
                   <p className="text-[11px] text-slate-400">
                     Las fechas base son inmutables. Haz clic sobre cualquier día para vender o registrar permisos en bloque (1 a 5 días).
                   </p>

@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mars.asistenciamina.data.local.SessionManager
@@ -121,7 +122,8 @@ fun AsistenciaMinaApp() {
                             label = {
                                 Text(
                                     text = tab.label,
-                                    fontSize = 11.sp
+                                    fontSize = 12.sp,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
                                 )
                             },
                             selected = selected,

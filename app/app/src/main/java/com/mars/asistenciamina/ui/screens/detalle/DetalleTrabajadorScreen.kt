@@ -66,6 +66,7 @@ import com.mars.asistenciamina.ui.theme.Emerald500
 import com.mars.asistenciamina.ui.theme.Rose500
 import com.mars.asistenciamina.ui.theme.Violet500
 import com.mars.asistenciamina.ui.theme.Slate200
+import com.mars.asistenciamina.ui.theme.Slate300
 import com.mars.asistenciamina.ui.theme.Slate400
 import com.mars.asistenciamina.ui.theme.Slate700
 import com.mars.asistenciamina.ui.theme.Slate800
@@ -128,13 +129,14 @@ fun DetalleTrabajadorScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = trabajador.nombres,
-                            fontSize = 13.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1
                         )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "Turno Atípico 20x10",
-                            fontSize = 10.sp,
+                            fontSize = 12.sp,
                             color = Slate400
                         )
                     }
@@ -176,16 +178,18 @@ fun DetalleTrabajadorScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Amber500),
                         shape = RoundedCornerShape(14.dp),
                         enabled = !guardando
                     ) {
                         if (guardando) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(20.dp),
                                 color = Slate950,
-                                strokeWidth = 2.dp
+                                strokeWidth = 2.5.dp
                             )
                         } else {
                             Icon(imageVector = Icons.Default.Sell, contentDescription = null, tint = Slate950)
@@ -194,7 +198,7 @@ fun DetalleTrabajadorScreen(
                                 text = "Registrar Venta (${selectedFechas.size} Días)",
                                 color = Slate950,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
+                                fontSize = 14.sp
                             )
                         }
                     }
@@ -216,18 +220,18 @@ fun DetalleTrabajadorScreen(
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = Slate900)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Info, contentDescription = null, tint = Amber400, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "RÉGIMEN 20 TRABAJO x 10 DESCANSO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Amber400)
+                            Icon(imageVector = Icons.Default.Info, contentDescription = null, tint = Amber400, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "RÉGIMEN 20 TRABAJO x 10 DESCANSO", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Amber400)
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Selecciona un bloque de descanso programado abajo para ver y marcar los días disponibles a vender (VD) o adelantar en mina.",
-                            fontSize = 11.sp,
-                            color = Slate400,
-                            lineHeight = 15.sp
+                            fontSize = 12.5.sp,
+                            color = Slate300,
+                            lineHeight = 18.sp
                         )
                     }
                 }
@@ -237,10 +241,10 @@ fun DetalleTrabajadorScreen(
             item {
                 Text(
                     text = "BLOQUES DE DESCANSO 2026",
-                    fontSize = 10.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = Slate400,
-                    letterSpacing = 1.sp
+                    letterSpacing = 0.8.sp
                 )
             }
 
@@ -267,7 +271,7 @@ fun DetalleTrabajadorScreen(
                             selectedDescanso = descanso
                             selectedFechas.clear()
                         },
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (esSeleccionado) Slate800 else Slate900
                     ),
@@ -276,62 +280,63 @@ fun DetalleTrabajadorScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp),
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
                                     .background(if (esSeleccionado) Amber500 else if (esActivoHoy) Violet500 else Slate700),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "#${descanso.cicloNro}",
-                                    fontSize = 11.sp,
+                                    fontSize = 12.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (esSeleccionado) Slate950 else Color.White
                                 )
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(14.dp))
                             Column {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = rangoTexto,
-                                        fontSize = 12.sp,
+                                        fontSize = 14.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
                                     )
                                     if (esActivoHoy) {
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Box(
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(4.dp))
+                                                .clip(RoundedCornerShape(6.dp))
                                                 .background(Violet500.copy(alpha = 0.2f))
-                                                .border(1.dp, Violet500.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                                                .border(1.dp, Violet500.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                                .padding(horizontal = 7.dp, vertical = 2.dp)
                                         ) {
                                             Text(
                                                 text = "EN CURSO",
                                                 color = Violet500,
-                                                fontSize = 8.sp,
+                                                fontSize = 10.sp,
                                                 fontWeight = FontWeight.Black
                                             )
                                         }
                                     }
                                 }
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "${descanso.diasTotales} días libres de descanso",
-                                    fontSize = 10.sp,
+                                    fontSize = 12.sp,
                                     color = Slate400
                                 )
                             }
                         }
 
                         if (esSeleccionado) {
-                            Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = Amber400, modifier = Modifier.size(18.dp))
+                            Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = Amber400, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
@@ -340,13 +345,13 @@ fun DetalleTrabajadorScreen(
             // Desglose interactivo de los días del bloque seleccionado
             if (selectedDescanso != null && diasDelBloque.isNotEmpty()) {
                 item {
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
                         text = "DÍAS DEL PERIODO (MARCAR PARA VENDER / ADELANTAR)",
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = Slate400,
-                        letterSpacing = 1.sp
+                        letterSpacing = 0.8.sp
                     )
                 }
 
@@ -367,7 +372,7 @@ fun DetalleTrabajadorScreen(
                                     }
                                 }
                             },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = if (isChecked) Amber500.copy(alpha = 0.15f) else Slate900
                         )
@@ -375,7 +380,7 @@ fun DetalleTrabajadorScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -399,10 +404,10 @@ fun DetalleTrabajadorScreen(
                                         uncheckedColor = Slate700
                                     )
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = diaIso,
-                                    fontSize = 12.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = if (isChecked) Amber400 else Slate200
                                 )
@@ -410,13 +415,13 @@ fun DetalleTrabajadorScreen(
 
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(if (isChecked) Amber500.copy(alpha = 0.2f) else Slate800)
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
                                 Text(
                                     text = if (isChecked) "SELECCIONADO" else "DISPONIBLE",
-                                    fontSize = 9.sp,
+                                    fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isChecked) Amber400 else Emerald500
                                 )

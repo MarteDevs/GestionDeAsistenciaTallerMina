@@ -53,12 +53,33 @@ interface GrillaProgramacionProps {
   refreshTrigger?: number;
 }
 
+const obtenerFechaHoyPeru = () => {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Lima',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const fechaIso = formatter.format(new Date()); // 'YYYY-MM-DD'
+    const [anio, mes, dia] = fechaIso.split('-').map(Number);
+    return { anio, mes, dia, fechaIso };
+  } catch (e) {
+    const d = new Date();
+    const anio = d.getFullYear();
+    const mes = d.getMonth() + 1;
+    const dia = d.getDate();
+    const fechaIso = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    return { anio, mes, dia, fechaIso };
+  }
+};
+
 export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshTrigger = 0 }) => {
+  const hoyPeru = React.useMemo(() => obtenerFechaHoyPeru(), []);
   const [anio, setAnio] = useState<number>(() => {
-    const currentYear = new Date().getFullYear();
-    return currentYear >= 2026 ? currentYear : 2026;
+    return hoyPeru.anio >= 2026 ? hoyPeru.anio : 2026;
   });
-  const [mes, setMes] = useState<number>(() => new Date().getMonth() + 1);
+  const [mes, setMes] = useState<number>(() => hoyPeru.mes);
   const [data, setData] = useState<GrillaData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [busqueda, setBusqueda] = useState<string>('');
@@ -143,11 +164,19 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
   };
 
   // Renderizado visual limpio sin saturación de números "1"
-  const renderCellContent = (estado: string) => {
+  const renderCellContent = (estado: string, isToday: boolean = false) => {
     switch (estado) {
       case '1':
-        // Punto minimalista sutil o vacío para no saturar la vista
-        return <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-slate-300"></span>;
+        // Punto minimalista: si es HOY, se destaca con color ámbar refinado
+        return (
+          <span
+            className={`inline-block rounded-full transition-all ${
+              isToday
+                ? 'w-2 h-2 bg-amber-500 shadow-sm ring-2 ring-amber-300/60'
+                : 'w-1.5 h-1.5 bg-slate-200 group-hover:bg-slate-300'
+            }`}
+          ></span>
+        );
       case 'DL':
         return <span className="font-extrabold text-[10px] tracking-tight text-purple-700">DL</span>;
       case 'VD':
@@ -159,15 +188,34 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
     }
   };
 
-  const getCellBg = (estado: string, isColumnHovered: boolean, isRowHovered: boolean) => {
-    if (estado === 'VD') return 'bg-emerald-100/90 border-emerald-300 hover:bg-emerald-200';
-    if (estado === 'P') return 'bg-rose-100/90 border-rose-300 hover:bg-rose-200';
-    if (estado === 'DL') return 'bg-purple-100/80 border-purple-200 hover:bg-purple-200/90';
+  const getCellBg = (
+    estado: string,
+    isColumnHovered: boolean,
+    isRowHovered: boolean,
+    isToday: boolean
+  ) => {
+    if (estado === 'VD') {
+      return isToday
+        ? 'bg-emerald-200/95 border-emerald-400 font-bold hover:bg-emerald-300'
+        : 'bg-emerald-100/90 border-emerald-300 hover:bg-emerald-200';
+    }
+    if (estado === 'P') {
+      return isToday
+        ? 'bg-rose-200/95 border-rose-400 font-bold hover:bg-rose-300'
+        : 'bg-rose-100/90 border-rose-300 hover:bg-rose-200';
+    }
+    if (estado === 'DL') {
+      return isToday
+        ? 'bg-purple-200/90 border-purple-400 font-bold hover:bg-purple-300'
+        : 'bg-purple-100/80 border-purple-200 hover:bg-purple-200/90';
+    }
 
     // Para estado '1' (Trabajo)
-    if (isRowHovered && isColumnHovered) return 'bg-amber-100/90 border-amber-300';
+    if (isRowHovered && isColumnHovered) return 'bg-amber-200 border-amber-400';
+    if (isRowHovered && isToday) return 'bg-amber-100 border-amber-300 font-bold';
     if (isRowHovered) return 'bg-amber-50/60 border-slate-100';
-    if (isColumnHovered) return 'bg-slate-50/80 border-slate-100';
+    if (isColumnHovered) return 'bg-slate-100/90 border-slate-200';
+    if (isToday) return 'bg-amber-50/90 border-amber-200';
     return 'bg-white border-slate-100';
   };
 
@@ -176,7 +224,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
       f.nombres.toLowerCase().includes(busqueda.toLowerCase()) ||
       f.area.toLowerCase().includes(busqueda.toLowerCase());
     const coincideArea =
-      filtroArea === 'TODAS' || f.area === filtroArea;
+      filtroArea === 'TODAS' || f.area.toLowerCase() === filtroArea.toLowerCase();
     return coincideTexto && coincideArea;
   }) || [];
 
@@ -186,7 +234,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           {/* Navegador de Fecha */}
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600">
               <CalendarIcon className="w-4 h-4" />
             </div>
@@ -230,6 +278,20 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Botón Acceso Rápido a Hoy */}
+            <button
+              onClick={() => {
+                const h = obtenerFechaHoyPeru();
+                setAnio(h.anio >= 2026 ? h.anio : 2026);
+                setMes(h.mes);
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 border border-amber-500/30 text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
+              title="Ir al día actual"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              <span>Hoy ({hoyPeru.dia} {MESES[hoyPeru.mes - 1]?.slice(0, 3)})</span>
+            </button>
           </div>
 
           {/* Buscador y Filtro */}
@@ -253,9 +315,8 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                 className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
               >
                 <option value="TODAS">Todas las Áreas</option>
-                <option value="Taller Carpintería Principal">Taller Principal</option>
+                <option value="Taller Mina">Taller Mina</option>
                 <option value="Carpintería Externa">Carpintería Externa</option>
-                <option value="Operaciones Especiales">Operaciones Especiales</option>
               </select>
             </div>
           </div>
@@ -316,14 +377,33 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                   {data.encabezados.map((enc) => {
                     const esFinDeSemana = enc.diaSemana === 'SÁB' || enc.diaSemana === 'DOM';
                     const isColHover = hoveredFecha === enc.fecha;
+                    const isToday = enc.fecha === hoyPeru.fechaIso;
                     return (
                       <th
                         key={enc.fecha}
-                        className={`p-1 w-[32px] min-w-[32px] max-w-[32px] border-r border-slate-800 text-[10px] transition-colors ${
-                          isColHover ? 'bg-amber-500/20 text-amber-300 font-bold' : esFinDeSemana ? 'text-amber-400 font-bold' : 'text-slate-400'
+                        className={`p-1 w-[32px] min-w-[32px] max-w-[32px] border-r text-[10px] transition-all ${
+                          isToday
+                            ? 'bg-amber-500 text-slate-950 font-black border-r-amber-400 border-l-2 border-l-amber-400 shadow-md ring-2 ring-amber-400 z-20'
+                            : isColHover
+                            ? 'bg-amber-500/20 text-amber-300 font-bold border-slate-800'
+                            : esFinDeSemana
+                            ? 'text-amber-400 font-bold border-slate-800'
+                            : 'text-slate-400 border-slate-800'
                         }`}
+                        title={isToday ? `¡Hoy es ${enc.diaSemana} ${enc.diaNumero}!` : undefined}
                       >
-                        {enc.diaSemana}
+                        {isToday ? (
+                          <div className="flex flex-col items-center justify-center leading-none py-0.5">
+                            <span className="text-[7.5px] font-black uppercase tracking-wider px-1 py-0.5 bg-slate-950 text-amber-300 rounded shadow-sm">
+                              HOY
+                            </span>
+                            <span className="text-[9.5px] font-black text-slate-950 mt-0.5">
+                              {enc.diaSemana}
+                            </span>
+                          </div>
+                        ) : (
+                          enc.diaSemana
+                        )}
                       </th>
                     );
                   })}
@@ -340,14 +420,26 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                   </th>
                   {data.encabezados.map((enc) => {
                     const isColHover = hoveredFecha === enc.fecha;
+                    const isToday = enc.fecha === hoyPeru.fechaIso;
                     return (
                       <th
                         key={enc.fecha}
-                        className={`p-1 w-[32px] min-w-[32px] max-w-[32px] border-r border-slate-700 transition-colors ${
-                          isColHover ? 'bg-amber-500/30 text-amber-300 font-extrabold' : 'text-slate-200'
+                        className={`p-1 w-[32px] min-w-[32px] max-w-[32px] border-r transition-all ${
+                          isToday
+                            ? 'bg-gradient-to-b from-amber-500 to-amber-600 text-slate-950 font-black border-r-amber-400 border-l-2 border-l-amber-400 z-20'
+                            : isColHover
+                            ? 'bg-amber-500/30 text-amber-300 font-extrabold border-slate-700'
+                            : 'text-slate-200 border-slate-700'
                         }`}
+                        title={isToday ? `Día actual: ${enc.diaNumero}` : undefined}
                       >
-                        {enc.diaNumero}
+                        {isToday ? (
+                          <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-950 text-amber-300 font-black text-[11px] shadow-lg ring-2 ring-amber-300">
+                            {enc.diaNumero}
+                          </div>
+                        ) : (
+                          enc.diaNumero
+                        )}
                       </th>
                     );
                   })}
@@ -384,6 +476,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                       {/* Celdas de Días */}
                       {fila.dias.map((dia) => {
                         const isColHover = hoveredFecha === dia.fecha;
+                        const isToday = dia.fecha === hoyPeru.fechaIso;
 
                         return (
                           <td
@@ -393,17 +486,24 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                             onClick={() =>
                               handleCellClick(fila.trabajadorId, fila.nombres, dia)
                             }
-                            title={`${fila.nombres} - ${dia.fecha}\nEstado: ${dia.estado}${
+                            title={`${fila.nombres} - ${dia.fecha}${
+                              isToday ? ' (HOY)' : ''
+                            }\nEstado: ${dia.estado}${
                               dia.motivoExcepcion ? `\nMotivo: ${dia.motivoExcepcion}` : ''
                             }\n(Clic para vender o aplicar permiso)`}
-                            className={`cursor-pointer p-0.5 border-r border-slate-100 transition-all duration-75 text-center w-[32px] min-w-[32px] max-w-[32px] h-9 ${getCellBg(
+                            className={`cursor-pointer p-0.5 transition-all duration-75 text-center w-[32px] min-w-[32px] max-w-[32px] h-9 ${
+                              isToday
+                                ? 'border-x-2 border-amber-400/90 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.2)]'
+                                : 'border-r border-slate-100'
+                            } ${getCellBg(
                               dia.estado,
                               isColHover,
-                              isRowHover
+                              isRowHover,
+                              isToday
                             )}`}
                           >
                             <div className="w-full h-full flex items-center justify-center">
-                              {renderCellContent(dia.estado)}
+                              {renderCellContent(dia.estado, isToday)}
                             </div>
                           </td>
                         );

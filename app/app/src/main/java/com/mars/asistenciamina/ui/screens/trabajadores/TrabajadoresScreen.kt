@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -62,6 +63,7 @@ import com.mars.asistenciamina.ui.theme.Cyan500
 import com.mars.asistenciamina.ui.theme.Emerald500
 import com.mars.asistenciamina.ui.theme.Violet500
 import com.mars.asistenciamina.ui.theme.Slate200
+import com.mars.asistenciamina.ui.theme.Slate300
 import com.mars.asistenciamina.ui.theme.Slate400
 import com.mars.asistenciamina.ui.theme.Slate600
 import com.mars.asistenciamina.ui.theme.Slate800
@@ -97,9 +99,10 @@ fun TrabajadoresScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "EQUIPO CARPINTERÍA",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Black
+                            text = "EQUIPO TALLER MINA",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.5.sp
                         )
                     }
                 }
@@ -118,14 +121,14 @@ fun TrabajadoresScreen(
                 onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Buscar colaborador...", color = Slate400, fontSize = 13.sp) },
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
+                placeholder = { Text("Buscar colaborador...", color = Slate400, fontSize = 14.sp) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = null,
                         tint = Amber400,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 },
                 singleLine = true,
@@ -169,10 +172,10 @@ fun TrabajadoresScreen(
                             Text(
                                 text = "${filtered.size} COLABORADORES REGISTRADOS",
                                 color = Slate400,
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp,
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
+                                letterSpacing = 0.8.sp,
+                                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)
                             )
                         }
 
@@ -295,35 +298,35 @@ fun CardTrabajadorItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 5.dp)
+            .padding(horizontal = 16.dp, vertical = 7.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Slate900)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Inicial Avatar con color acorde al estado
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(estado.colorEstado.copy(alpha = 0.18f))
-                    .border(1.dp, estado.colorEstado.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
+                    .border(1.dp, estado.colorEstado.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = trabajador.nombres.take(1).uppercase(),
                     color = estado.colorEstado,
                     fontWeight = FontWeight.Black,
-                    fontSize = 17.sp
+                    fontSize = 18.sp
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 // Nombre y Badge de estado operativo
@@ -335,41 +338,42 @@ fun CardTrabajadorItem(
                     Text(
                         text = trabajador.nombres,
                         color = Color.White,
-                        fontSize = 13.sp,
+                        fontSize = 14.5.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(7.dp))
                             .background(estado.colorEstado.copy(alpha = 0.15f))
-                            .border(1.dp, estado.colorEstado.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .border(1.dp, estado.colorEstado.copy(alpha = 0.35f), RoundedCornerShape(7.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = estado.etiquetaEstado,
                             color = estado.colorEstado,
-                            fontSize = 9.sp,
+                            fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(5.dp))
 
                 // Detalle operativo de fechas
                 Text(
                     text = estado.detalleFechas,
-                    color = Slate200,
-                    fontSize = 11.sp,
+                    color = Slate300,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Normal
                 )
 
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Fila inferior: Área y total de periodos
                 Row(
@@ -377,31 +381,31 @@ fun CardTrabajadorItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = trabajador.area.ifBlank { "Taller Principal" },
+                        text = trabajador.area.ifBlank { "Taller Mina" },
                         color = Slate400,
-                        fontSize = 10.sp,
+                        fontSize = 11.5.sp,
                         fontWeight = FontWeight.Medium
                     )
 
                     Text(
                         text = "•",
                         color = Slate600,
-                        fontSize = 10.sp
+                        fontSize = 11.5.sp
                     )
 
                     Text(
                         text = "${trabajador.descansos.size} periodos 2026",
                         color = Slate400,
-                        fontSize = 10.sp
+                        fontSize = 11.5.sp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = Slate800,
+                tint = Slate600,
                 modifier = Modifier.size(18.dp)
             )
         }

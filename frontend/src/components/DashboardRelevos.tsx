@@ -183,9 +183,8 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
                 className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
               >
                 <option value="TODAS">Todas las Áreas</option>
-                <option value="Principal">Taller Principal</option>
-                <option value="Externa">Carpintería Externa</option>
-                <option value="Operaciones Especiales">Operaciones Especiales</option>
+                <option value="Taller Mina">Taller Mina</option>
+                <option value="Carpintería Externa">Carpintería Externa</option>
               </select>
             </div>
 

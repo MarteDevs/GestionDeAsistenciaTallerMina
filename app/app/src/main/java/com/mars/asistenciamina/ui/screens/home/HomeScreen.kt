@@ -61,6 +61,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -125,14 +126,14 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "TALLER CARPINTERÍA",
-                                fontSize = 14.sp,
+                                text = "TALLER MINA",
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 0.5.sp
                             )
                             Text(
                                 text = if (usuarioActual != null) "Hola, ${usuarioActual.nombres.split(" ").firstOrNull() ?: usuarioActual.nombres}" else "Operación 20x10 Mina",
-                                fontSize = 10.sp,
+                                fontSize = 11.5.sp,
                                 color = Slate400
                             )
                         }
@@ -251,11 +252,11 @@ fun HomeScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
                             shape = RoundedCornerShape(20.dp),
                             colors = CardDefaults.cardColors(containerColor = Slate900)
                         ) {
-                            Column(modifier = Modifier.padding(18.dp)) {
+                            Column(modifier = Modifier.padding(20.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -266,12 +267,13 @@ fun HomeScreen(
                                             text = "Relevos en Mina",
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 16.sp
+                                            fontSize = 17.sp
                                         )
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = "Ref: ${uiState.fechaReferencia} (7 días ventana)",
                                             color = Slate400,
-                                            fontSize = 11.sp
+                                            fontSize = 12.sp
                                         )
                                     }
 
@@ -279,23 +281,23 @@ fun HomeScreen(
                                         modifier = Modifier
                                             .clip(CircleShape)
                                             .background(Amber500.copy(alpha = 0.15f))
-                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                            .padding(horizontal = 12.dp, vertical = 5.dp)
                                     ) {
                                         Text(
                                             text = "${uiState.resumen.total} Alertas",
                                             color = Amber400,
-                                            fontSize = 11.sp,
+                                            fontSize = 11.5.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(18.dp))
 
                                 // Grid de 3 Métricas Operativas
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     MetricaBadge(
                                         titulo = "En Descanso",
@@ -325,8 +327,8 @@ fun HomeScreen(
                         LazyRow(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             item {
                                 FiltroChip(
@@ -377,10 +379,10 @@ fun HomeScreen(
                                 else -> "TODOS LOS RELEVOS EN VENTANA (${eventosFiltrados.size})"
                             },
                             color = Slate400,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                            letterSpacing = 0.8.sp,
+                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 8.dp)
                         )
                     }
 
@@ -444,27 +446,27 @@ fun FiltroChip(
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = texto,
                 color = if (seleccionado) colorActivo else Slate400,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Medium
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(7.dp))
             Box(
                 modifier = Modifier
                     .clip(CircleShape)
                     .background(if (seleccionado) colorActivo else Slate800)
-                    .padding(horizontal = 6.dp, vertical = 1.dp)
+                    .padding(horizontal = 7.dp, vertical = 2.dp)
             ) {
                 Text(
                     text = conteo.toString(),
                     color = if (seleccionado) Slate950 else Slate400,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Black
                 )
             }
@@ -481,15 +483,15 @@ fun MetricaBadge(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(Slate950)
-            .padding(10.dp),
+            .padding(vertical = 12.dp, horizontal = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = valor, color = color, fontSize = 16.sp, fontWeight = FontWeight.Black)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = titulo, color = Slate400, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+            Text(text = valor, color = color, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = titulo, color = Slate400, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -524,20 +526,20 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 5.dp),
-        shape = RoundedCornerShape(16.dp),
+            .padding(horizontal = 16.dp, vertical = 7.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Slate900)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(badgeColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -545,11 +547,11 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                     imageVector = iconVector,
                     contentDescription = null,
                     tint = badgeColor,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 // Fila 1: Nombre y Badge de Estado
@@ -561,42 +563,43 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                     Text(
                         text = evento.trabajadorNombre,
                         color = Color.White,
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(7.dp))
                             .background(badgeColor.copy(alpha = 0.18f))
-                            .border(1.dp, badgeColor.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .border(1.dp, badgeColor.copy(alpha = 0.4f), RoundedCornerShape(7.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = badgeLabel,
                             color = badgeColor,
-                            fontSize = 9.sp,
+                            fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(5.dp))
 
                 // Fila 2: Descripción amigable y clara
                 Text(
                     text = evento.descripcion,
                     color = Slate200,
-                    fontSize = 11.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Normal,
-                    lineHeight = 15.sp
+                    lineHeight = 17.sp
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(7.dp))
 
                 // Fila 3: Fecha clave y Contador de días
                 Row(
@@ -609,9 +612,9 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                             imageVector = Icons.Default.CalendarMonth,
                             contentDescription = null,
                             tint = Slate400,
-                            modifier = Modifier.size(11.dp)
+                            modifier = Modifier.size(13.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
                             text = when {
                                 esEnDescanso -> "Fin de descanso: ${evento.fecha}"
@@ -620,18 +623,18 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                                 else -> evento.fecha
                             },
                             color = Slate400,
-                            fontSize = 10.sp
+                            fontSize = 11.5.sp
                         )
                     }
 
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(7.dp))
                             .background(
                                 if (evento.esHoy) Rose500.copy(alpha = 0.2f)
                                 else Slate800
                             )
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = when {
@@ -641,18 +644,18 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                                 else -> "en ${evento.diasRestantes}d"
                             },
                             color = if (evento.esHoy) Rose500 else Slate400,
-                            fontSize = 9.sp,
+                            fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = Slate800,
+                tint = Slate600,
                 modifier = Modifier.size(18.dp)
             )
         }

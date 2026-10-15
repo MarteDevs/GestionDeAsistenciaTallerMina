@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 const datosProgramacion = {
-  titulo: "PROGRAMACIÓN TALLER CARPINTERIA 2026",
+  titulo: "PROGRAMACIÓN TALLER MINA 2026",
   participantes: [
     {
       id: 1,
@@ -226,7 +226,7 @@ function parseFecha(str: string, anioBase = 2026, mesContexto = 1): Date | null 
 }
 
 async function main() {
-  console.log('--- Iniciando Seeding de Datos Reales de Carpintería 2026 y Usuarios ---');
+  console.log('--- Iniciando Seeding de Datos Reales de Taller Mina 2026 y Usuarios ---');
 
   // Limpiar datos
   await prisma.excepcion.deleteMany({});
@@ -299,7 +299,7 @@ async function main() {
     const trabajador = await prisma.trabajador.create({
       data: {
         nombres: p.nombre.trim(),
-        area: (p as any).tabla === 'secundaria' ? 'Carpintería Externa' : 'Taller Carpintería Principal',
+        area: (p as any).tabla === 'secundaria' ? 'Carpintería Externa' : 'Taller Mina',
         activo: true,
       },
     });

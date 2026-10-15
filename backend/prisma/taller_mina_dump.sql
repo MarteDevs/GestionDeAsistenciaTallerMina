@@ -101,18 +101,18 @@ INSERT INTO `usuarios` (`id`, `email`, `username`, `password`, `nombres`, `rol`,
 -- CARGA DE TRABAJADORES (13 registros)
 -- =====================================================
 INSERT INTO `trabajadores` (`id`, `nombres`, `area`, `activo`) VALUES
-(19, 'MORALES MATOS EDITH', 'Taller Carpintería Principal', 1),
-(20, 'POLO TANDAYPAN JORGE', 'Taller Carpintería Principal', 1),
-(21, 'CELESTINO AGUILAR LARRY MOLL', 'Taller Carpintería Principal', 1),
-(22, 'BACA MORENO JUSTINIANO', 'Taller Carpintería Principal', 1),
-(23, 'REYES GERBACIO ALFREDO', 'Taller Carpintería Principal', 1),
-(24, 'CELESTINO AGUILAR MANUEL', 'Taller Carpintería Principal', 1),
-(25, 'NOGUERA MOLINA EDINSON JOSE', 'Taller Carpintería Principal', 1),
-(26, 'FASABI CASTILLO LUIS ALBERTO', 'Taller Carpintería Principal', 1),
-(27, 'ULLOA DOMINGUEZ YOSBIN JEINER', 'Taller Carpintería Principal', 1),
-(28, 'CAMPOS GELBERT YURI', 'Taller Carpintería Principal', 1),
-(29, 'HEBER NOÉ CUSTODIO RUIZ', 'Taller Carpintería Principal', 1),
-(30, 'MARITZA', 'Taller Carpintería Principal', 1),
+(19, 'MORALES MATOS EDITH', 'Taller Mina', 1),
+(20, 'POLO TANDAYPAN JORGE', 'Taller Mina', 1),
+(21, 'CELESTINO AGUILAR LARRY MOLL', 'Taller Mina', 1),
+(22, 'BACA MORENO JUSTINIANO', 'Taller Mina', 1),
+(23, 'REYES GERBACIO ALFREDO', 'Taller Mina', 1),
+(24, 'CELESTINO AGUILAR MANUEL', 'Taller Mina', 1),
+(25, 'NOGUERA MOLINA EDINSON JOSE', 'Taller Mina', 1),
+(26, 'FASABI CASTILLO LUIS ALBERTO', 'Taller Mina', 1),
+(27, 'ULLOA DOMINGUEZ YOSBIN JEINER', 'Taller Mina', 1),
+(28, 'CAMPOS GELBERT YURI', 'Taller Mina', 1),
+(29, 'HEBER NOÉ CUSTODIO RUIZ', 'Taller Mina', 1),
+(30, 'MARITZA', 'Taller Mina', 1),
 (31, 'PABLO ANTICONA', 'Carpintería Externa', 1);
 
 -- =====================================================
