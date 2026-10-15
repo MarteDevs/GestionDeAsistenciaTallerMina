@@ -59,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -341,28 +342,31 @@ fun HomeScreen(
                             }
                             item {
                                 FiltroChip(
-                                    texto = "🛌 En Descanso",
+                                    texto = "En Descanso",
                                     conteo = descansoCount,
                                     seleccionado = selectedTab == "EN_DESCANSO",
                                     colorActivo = Violet500,
+                                    icon = Icons.Default.Bedtime,
                                     onClick = { selectedTab = "EN_DESCANSO" }
                                 )
                             }
                             item {
                                 FiltroChip(
-                                    texto = "⬇️ Por Bajar",
+                                    texto = "Por Bajar",
                                     conteo = porBajarCount,
                                     seleccionado = selectedTab == "POR_BAJAR",
                                     colorActivo = Amber400,
+                                    icon = Icons.Default.FlightTakeoff,
                                     onClick = { selectedTab = "POR_BAJAR" }
                                 )
                             }
                             item {
                                 FiltroChip(
-                                    texto = "💼 Ventas (VD)",
+                                    texto = "Ventas (VD)",
                                     conteo = ventasCount,
                                     seleccionado = selectedTab == "VENTAS",
                                     colorActivo = Emerald500,
+                                    icon = Icons.Default.Paid,
                                     onClick = { selectedTab = "VENTAS" }
                                 )
                             }
@@ -434,6 +438,7 @@ fun FiltroChip(
     conteo: Int,
     seleccionado: Boolean,
     colorActivo: Color,
+    icon: ImageVector? = null,
     onClick: () -> Unit
 ) {
     Box(
@@ -450,6 +455,15 @@ fun FiltroChip(
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (seleccionado) colorActivo else Slate400,
+                    modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
             Text(
                 text = texto,
                 color = if (seleccionado) colorActivo else Slate400,
@@ -510,10 +524,10 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
     }
 
     val badgeLabel = when {
-        esEnDescanso -> "🛌 En Descanso"
-        esPorBajar -> "⬇️ Por Bajar"
-        esVenta -> "💼 Venta Activa"
-        else -> "📋 Permiso"
+        esEnDescanso -> "En Descanso"
+        esPorBajar -> "Por Bajar"
+        esVenta -> "Venta Activa"
+        else -> "Permiso"
     }
 
     val iconVector = when {
@@ -579,12 +593,21 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                             .border(1.dp, badgeColor.copy(alpha = 0.4f), RoundedCornerShape(7.dp))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
-                        Text(
-                            text = badgeLabel,
-                            color = badgeColor,
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = iconVector,
+                                contentDescription = null,
+                                tint = badgeColor,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = badgeLabel,
+                                color = badgeColor,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 

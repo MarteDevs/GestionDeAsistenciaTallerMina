@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -201,7 +202,8 @@ data class EstadoOperativoTrabajador(
     val enDescanso: Boolean,
     val etiquetaEstado: String,
     val detalleFechas: String,
-    val colorEstado: Color
+    val colorEstado: Color,
+    val icono: ImageVector
 )
 
 fun obtenerEstadoOperativo(descansos: List<DescansoDto>): EstadoOperativoTrabajador {
@@ -210,7 +212,8 @@ fun obtenerEstadoOperativo(descansos: List<DescansoDto>): EstadoOperativoTrabaja
             enDescanso = false,
             etiquetaEstado = "En Guardia Mina",
             detalleFechas = "Sin descansos programados",
-            colorEstado = Emerald500
+            colorEstado = Emerald500,
+            icono = Icons.Default.Construction
         )
     }
 
@@ -237,16 +240,18 @@ fun obtenerEstadoOperativo(descansos: List<DescansoDto>): EstadoOperativoTrabaja
 
             EstadoOperativoTrabajador(
                 enDescanso = true,
-                etiquetaEstado = "🛌 En Descanso ($diasTexto)",
+                etiquetaEstado = "En Descanso ($diasTexto)",
                 detalleFechas = "Retorna a taller: ${reincorporacion.format(fmt)}",
-                colorEstado = Violet500
+                colorEstado = Violet500,
+                icono = Icons.Default.Bedtime
             )
         } catch (e: Exception) {
             EstadoOperativoTrabajador(
                 enDescanso = true,
-                etiquetaEstado = "🛌 En Descanso",
+                etiquetaEstado = "En Descanso",
                 detalleFechas = "Periodo activo",
-                colorEstado = Violet500
+                colorEstado = Violet500,
+                icono = Icons.Default.Bedtime
             )
         }
     }
@@ -272,17 +277,19 @@ fun obtenerEstadoOperativo(descansos: List<DescansoDto>): EstadoOperativoTrabaja
 
         return EstadoOperativoTrabajador(
             enDescanso = false,
-            etiquetaEstado = "🔨 En Mina ($textoBaja)",
+            etiquetaEstado = "En Mina ($textoBaja)",
             detalleFechas = "Próx. descanso: $rangoStr",
-            colorEstado = Amber400
+            colorEstado = Amber400,
+            icono = Icons.Default.Construction
         )
     }
 
     return EstadoOperativoTrabajador(
         enDescanso = false,
-        etiquetaEstado = "🔨 En Guardia Mina",
+        etiquetaEstado = "En Guardia Mina",
         detalleFechas = "Ciclo 20x10 cumplido",
-        colorEstado = Emerald500
+        colorEstado = Emerald500,
+        icono = Icons.Default.Construction
     )
 }
 
@@ -354,12 +361,21 @@ fun CardTrabajadorItem(
                             .border(1.dp, estado.colorEstado.copy(alpha = 0.35f), RoundedCornerShape(7.dp))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
-                        Text(
-                            text = estado.etiquetaEstado,
-                            color = estado.colorEstado,
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = estado.icono,
+                                contentDescription = null,
+                                tint = estado.colorEstado,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = estado.etiquetaEstado,
+                                color = estado.colorEstado,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 
