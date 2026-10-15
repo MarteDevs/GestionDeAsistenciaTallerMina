@@ -1,9 +1,13 @@
 package com.mars.asistenciamina
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -20,13 +24,14 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mars.asistenciamina.data.models.TrabajadorDto
@@ -37,13 +42,14 @@ import com.mars.asistenciamina.ui.theme.Amber400
 import com.mars.asistenciamina.ui.theme.Amber500
 import com.mars.asistenciamina.ui.theme.AsistenciaMinaTheme
 import com.mars.asistenciamina.ui.theme.Slate400
-import com.mars.asistenciamina.ui.theme.Slate800
 import com.mars.asistenciamina.ui.theme.Slate900
 import com.mars.asistenciamina.ui.theme.Slate950
+import com.mars.asistenciamina.util.NotificationHelper
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        NotificationHelper.createNotificationChannel(this)
         enableEdgeToEdge()
         setContent {
             AsistenciaMinaTheme(darkTheme = true) {
@@ -63,8 +69,20 @@ enum class NavigationTab(
 
 @Composable
 fun AsistenciaMinaApp() {
+    val context = LocalContext.current
     var currentTab by rememberSaveable { mutableStateOf(NavigationTab.HOME) }
     var selectedTrabajador by rememberSaveable { mutableStateOf<TrabajadorDto?>(null) }
+
+    // Solicitar permisos de notificación en Android 13+ (TIRAMISU)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     if (selectedTrabajador != null) {
         DetalleTrabajadorScreen(

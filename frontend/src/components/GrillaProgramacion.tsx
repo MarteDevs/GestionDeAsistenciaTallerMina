@@ -54,8 +54,11 @@ interface GrillaProgramacionProps {
 }
 
 export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshTrigger = 0 }) => {
-  const [anio, setAnio] = useState<number>(2026);
-  const [mes, setMes] = useState<number>(1);
+  const [anio, setAnio] = useState<number>(() => {
+    const currentYear = new Date().getFullYear();
+    return currentYear >= 2026 ? currentYear : 2026;
+  });
+  const [mes, setMes] = useState<number>(() => new Date().getMonth() + 1);
   const [data, setData] = useState<GrillaData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [busqueda, setBusqueda] = useState<string>('');
@@ -293,11 +296,11 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-xs text-center select-none">
+            <table className="w-full border-collapse text-xs text-center select-none table-fixed">
               <thead>
                 {/* Cabecera Día de Semana */}
                 <tr className="bg-slate-900 text-slate-300 font-medium">
-                  <th className="sticky left-0 z-30 bg-slate-900 p-2.5 text-left min-w-[230px] border-r border-slate-800 tracking-wider uppercase text-[10px]">
+                  <th className="sticky left-0 z-30 bg-slate-900 p-2.5 text-left w-[230px] min-w-[230px] max-w-[230px] border-r border-slate-800 tracking-wider uppercase text-[10px]">
                     Colaborador / Área
                   </th>
                   {data.encabezados.map((enc) => {
@@ -306,7 +309,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                     return (
                       <th
                         key={enc.fecha}
-                        className={`p-1 min-w-[32px] border-r border-slate-800 text-[10px] transition-colors ${
+                        className={`p-1 w-[32px] min-w-[32px] max-w-[32px] border-r border-slate-800 text-[10px] transition-colors ${
                           isColHover ? 'bg-amber-500/20 text-amber-300 font-bold' : esFinDeSemana ? 'text-amber-400 font-bold' : 'text-slate-400'
                         }`}
                       >
@@ -314,15 +317,15 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                       </th>
                     );
                   })}
-                  <th className="p-1.5 border-r border-slate-800 bg-slate-800 text-white min-w-[40px] font-bold text-[10px]">T</th>
-                  <th className="p-1.5 border-r border-slate-800 bg-purple-950 text-purple-200 min-w-[40px] font-bold text-[10px]">DL</th>
-                  <th className="p-1.5 border-r border-slate-800 bg-emerald-950 text-emerald-200 min-w-[40px] font-bold text-[10px]">VD</th>
-                  <th className="p-1.5 bg-rose-950 text-rose-200 min-w-[40px] font-bold text-[10px]">P</th>
+                  <th className="p-1 border-r border-slate-800 bg-slate-950 text-white w-[42px] min-w-[42px] max-w-[42px] font-black text-[10px] text-center" title="Total Días Trabajados">T</th>
+                  <th className="p-1 border-r border-slate-800 bg-purple-950 text-purple-300 w-[42px] min-w-[42px] max-w-[42px] font-black text-[10px] text-center" title="Total Descansos Libres">DL</th>
+                  <th className="p-1 border-r border-slate-800 bg-emerald-950 text-emerald-300 w-[42px] min-w-[42px] max-w-[42px] font-black text-[10px] text-center" title="Total Ventas de Descanso">VD</th>
+                  <th className="p-1 bg-rose-950 text-rose-300 w-[42px] min-w-[42px] max-w-[42px] font-black text-[10px] text-center" title="Total Permisos">P</th>
                 </tr>
 
                 {/* Cabecera Número de Día */}
                 <tr className="bg-slate-800 text-slate-100 font-bold border-b border-slate-700">
-                  <th className="sticky left-0 z-30 bg-slate-800 p-1.5 px-3 text-left border-r border-slate-700 text-slate-300 text-[10px]">
+                  <th className="sticky left-0 z-30 bg-slate-800 p-1.5 px-3 text-left border-r border-slate-700 text-slate-300 text-[10px] w-[230px] min-w-[230px] max-w-[230px]">
                     {MESES[mes - 1].toUpperCase()} {anio}
                   </th>
                   {data.encabezados.map((enc) => {
@@ -330,7 +333,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                     return (
                       <th
                         key={enc.fecha}
-                        className={`p-1 border-r border-slate-700 transition-colors ${
+                        className={`p-1 w-[32px] min-w-[32px] max-w-[32px] border-r border-slate-700 transition-colors ${
                           isColHover ? 'bg-amber-500/30 text-amber-300 font-extrabold' : 'text-slate-200'
                         }`}
                       >
@@ -338,7 +341,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                       </th>
                     );
                   })}
-                  <th colSpan={4} className="p-1 bg-slate-800 text-[9px] uppercase tracking-wider text-amber-400">
+                  <th colSpan={4} className="p-1 bg-slate-850 text-[9px] uppercase tracking-wider text-amber-400 text-center font-black">
                     Saldos
                   </th>
                 </tr>
@@ -356,14 +359,14 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                     >
                       {/* Columna Colaborador Fija */}
                       <td
-                        className={`sticky left-0 z-20 p-2.5 text-left border-r border-slate-200 transition-colors shadow-[2px_0_5px_rgba(0,0,0,0.02)] ${
+                        className={`sticky left-0 z-20 p-2.5 text-left border-r border-slate-200 transition-colors shadow-[2px_0_5px_rgba(0,0,0,0.02)] w-[230px] min-w-[230px] max-w-[230px] ${
                           isRowHover ? 'bg-amber-50 text-slate-900 font-extrabold' : 'bg-white text-slate-800 font-bold'
                         }`}
                       >
                         <div className="truncate tracking-tight text-[11px]">
                           {fila.nombres}
                         </div>
-                        <div className="text-[10px] text-slate-400 font-normal">
+                        <div className="text-[10px] text-slate-400 font-normal truncate">
                           {fila.area}
                         </div>
                       </td>
@@ -383,7 +386,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                             title={`${fila.nombres} - ${dia.fecha}\nEstado: ${dia.estado}${
                               dia.motivoExcepcion ? `\nMotivo: ${dia.motivoExcepcion}` : ''
                             }\n(Clic para vender o aplicar permiso)`}
-                            className={`cursor-pointer p-1 border-r transition-all duration-75 text-center flex-col justify-center items-center h-9 ${getCellBg(
+                            className={`cursor-pointer p-0.5 border-r border-slate-100 transition-all duration-75 text-center w-[32px] min-w-[32px] max-w-[32px] h-9 ${getCellBg(
                               dia.estado,
                               isColHover,
                               isRowHover
@@ -396,18 +399,26 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                         );
                       })}
 
-                      {/* Totales */}
-                      <td className="p-1 font-bold border-r bg-slate-50 text-slate-800 text-[11px]">
-                        {fila.resumen.totalTrabajados}
+                      {/* Totales Resaltantes y Legibles */}
+                      <td className="p-1 border-r border-slate-200 w-[42px] min-w-[42px] max-w-[42px] text-center bg-slate-100/60">
+                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-slate-900 text-white font-black text-[11px] shadow-xs">
+                          {fila.resumen.totalTrabajados}
+                        </div>
                       </td>
-                      <td className="p-1 font-bold border-r bg-purple-50/70 text-purple-800 text-[11px]">
-                        {fila.resumen.totalDescansos}
+                      <td className="p-1 border-r border-purple-200 w-[42px] min-w-[42px] max-w-[42px] text-center bg-purple-50/50">
+                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-purple-600 text-white font-black text-[11px] shadow-xs">
+                          {fila.resumen.totalDescansos}
+                        </div>
                       </td>
-                      <td className="p-1 font-bold border-r bg-emerald-50/70 text-emerald-800 text-[11px]">
-                        {fila.resumen.totalVentas}
+                      <td className="p-1 border-r border-emerald-200 w-[42px] min-w-[42px] max-w-[42px] text-center bg-emerald-50/50">
+                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-emerald-600 text-white font-black text-[11px] shadow-xs">
+                          {fila.resumen.totalVentas}
+                        </div>
                       </td>
-                      <td className="p-1 font-bold bg-rose-50/70 text-rose-800 text-[11px]">
-                        {fila.resumen.totalPermisos}
+                      <td className="p-1 w-[42px] min-w-[42px] max-w-[42px] text-center bg-rose-50/50">
+                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-rose-600 text-white font-black text-[11px] shadow-xs">
+                          {fila.resumen.totalPermisos}
+                        </div>
                       </td>
                     </tr>
                   );

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.FlightTakeoff
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -42,12 +43,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,6 +67,7 @@ import com.mars.asistenciamina.ui.theme.Slate400
 import com.mars.asistenciamina.ui.theme.Slate800
 import com.mars.asistenciamina.ui.theme.Slate900
 import com.mars.asistenciamina.ui.theme.Slate950
+import com.mars.asistenciamina.util.NotificationHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,7 +75,16 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
     onNavigateToTrabajadores: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
+
+    // Si hay eventos cargados, notificar automáticamente en la barra de notificaciones
+    LaunchedEffect(state) {
+        if (state is HomeUiState.Success) {
+            val eventos = (state as HomeUiState.Success).eventos
+            NotificationHelper.notifyUpcomingShifts(context, eventos)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -113,11 +126,23 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.cargarTurnos("2026-10-13") }) {
+                    IconButton(onClick = {
+                        if (state is HomeUiState.Success) {
+                            val eventos = (state as HomeUiState.Success).eventos
+                            NotificationHelper.notifyUpcomingShifts(context, eventos)
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.NotificationsActive,
+                            contentDescription = "Enviar Notificación Push",
+                            tint = Amber400
+                        )
+                    }
+                    IconButton(onClick = { viewModel.cargarTurnos(null) }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Actualizar",
-                            tint = Amber400
+                            tint = Color.White
                         )
                     }
                 }
@@ -170,7 +195,7 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.height(20.dp))
                     Button(
-                        onClick = { viewModel.cargarTurnos("2026-10-13") },
+                        onClick = { viewModel.cargarTurnos(null) },
                         colors = ButtonDefaults.buttonColors(containerColor = Amber500)
                     ) {
                         Text(text = "Reintentar", color = Slate950, fontWeight = FontWeight.Bold)

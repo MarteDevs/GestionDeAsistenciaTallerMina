@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 sealed interface HomeUiState {
     data object Loading : HomeUiState
@@ -25,16 +28,23 @@ class HomeViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    init {
-        cargarTurnos("2026-10-13")
+    private fun getFechaHoyIso(): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return sdf.format(Date())
     }
 
-    fun cargarTurnos(fecha: String = "2026-10-13") {
+    init {
+        // Carga inicial con la fecha actual
+        cargarTurnos()
+    }
+
+    fun cargarTurnos(fecha: String? = null) {
+        val fechaConsulta = fecha ?: getFechaHoyIso()
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
             try {
                 val response = ApiClient.apiService.getProximosTurnos(
-                    fechaReferencia = fecha,
+                    fechaReferencia = fechaConsulta,
                     diasVentana = 7
                 )
                 _uiState.value = HomeUiState.Success(
@@ -44,7 +54,7 @@ class HomeViewModel : ViewModel() {
                 )
             } catch (e: Exception) {
                 _uiState.value = HomeUiState.Error(
-                    e.localizedMessage ?: "No se pudo conectar con el servidor local (10.0.2.2:4000)"
+                    e.localizedMessage ?: "No se pudo conectar con el servidor (https://asistenciamina.duckdns.org)"
                 )
             }
         }
