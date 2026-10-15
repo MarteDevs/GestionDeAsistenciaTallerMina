@@ -404,13 +404,30 @@ fun DetalleTrabajadorScreen(
                                         uncheckedColor = Slate700
                                     )
                                 )
+                                val diaFormateado = remember(diaIso) {
+                                    try {
+                                        val d = LocalDate.parse(diaIso)
+                                        val diaSem = d.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale("es", "PE")).replaceFirstChar { it.uppercase() }
+                                        val mesNom = d.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale("es", "PE")).replaceFirstChar { it.uppercase() }
+                                        "$diaSem, ${d.dayOfMonth} $mesNom ${d.year}"
+                                    } catch (e: Exception) {
+                                        diaIso
+                                    }
+                                }
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = diaIso,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (isChecked) Amber400 else Slate200
-                                )
+                                Column {
+                                    Text(
+                                        text = diaFormateado,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isChecked) Amber400 else Color.White
+                                    )
+                                    Text(
+                                        text = "Fecha: $diaIso",
+                                        fontSize = 11.sp,
+                                        color = Slate400
+                                    )
+                                }
                             }
 
                             Box(
