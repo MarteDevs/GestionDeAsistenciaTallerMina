@@ -131,8 +131,8 @@ export class NotificacionesController {
             });
           }
 
-          // Evento A2: Descanso en curso hoy que finaliza más allá de la ventana
-          if (fiDate < hoyUtc && ffDate >= hoyUtc && ffDate > limiteUtc) {
+          // Evento A2: Descanso en curso hoy (iniciado antes de hoy y vigente hoy)
+          if (fiDate < hoyUtc && ffDate >= hoyUtc) {
             const diasParaFin = Math.round((ffDate.getTime() - hoyUtc.getTime()) / (1000 * 60 * 60 * 24));
             eventos.push({
               id: `descanso-curso-${t.id}-${fiStr}`,
@@ -142,7 +142,9 @@ export class NotificacionesController {
               area: t.area,
               fechaEvento: fechaHoyStr,
               diasRestantes: 0,
-              descripcion: `${t.nombres} se encuentra actualmente en descanso programado (quedan ${diasParaFin} días, hasta ${ffStr}).`,
+              descripcion: diasParaFin === 0
+                ? `${t.nombres} culmina hoy su período de descanso programado.`
+                : `${t.nombres} se encuentra actualmente en descanso programado (quedan ${diasParaFin} días, hasta ${ffStr}).`,
               detalle: {
                 fechaInicio: fiStr,
                 fechaFin: ffStr,

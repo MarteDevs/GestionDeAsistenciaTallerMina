@@ -33,7 +33,9 @@ export class ProgramacionController {
 
   public static async eliminarExcepcion(req: Request, res: Response): Promise<void> {
     try {
-      const { trabajadorId, fecha } = req.body;
+      const trabajadorId = req.body?.trabajadorId || req.query?.trabajadorId;
+      const fecha = req.body?.fecha || req.query?.fecha;
+
       if (!trabajadorId || !fecha) {
         res.status(400).json({ success: false, error: 'trabajadorId y fecha son requeridos' });
         return;

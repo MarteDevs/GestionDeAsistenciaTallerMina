@@ -209,7 +209,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onSelectFech
                           {ev.trabajadorNombre}
                         </span>
                         <span
-                          className={`text-[9px] font-semibold px-1.5 py-0.2 rounded ${
+                          className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${
                             ev.esHoy
                               ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold'
                               : 'bg-slate-800 text-slate-400'

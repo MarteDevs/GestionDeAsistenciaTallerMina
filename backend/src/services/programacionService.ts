@@ -198,19 +198,42 @@ export class ProgramacionService {
       throw new Error('El trabajador especificado no existe o está inactivo.');
     }
 
-    const esDescansoBase = trabajador.descansosProgramados.some((dp: any) => {
+    const descansoCorrespondiente = trabajador.descansosProgramados.find((dp: any) => {
       const inicio = new Date(dp.fechaInicio);
       const fin = new Date(dp.fechaFin);
       return fechaObj >= inicio && fechaObj <= fin;
     });
 
-    if (tipo === TipoExcepcion.VENTA_DESCANSO && !esDescansoBase) {
-      throw new Error(
-        'Operación inválida: No se puede registrar Venta de Descanso en un día programado como laborable.'
-      );
+    if (tipo === TipoExcepcion.VENTA_DESCANSO) {
+      if (!descansoCorrespondiente) {
+        throw new Error(
+          'Operación inválida: No se puede registrar Venta de Descanso en un día programado como laborable.'
+        );
+      }
+
+      // Validar en BD que en este ciclo no se superen los 5 días vendidos de descanso
+      const ventasEnCiclo = await client.excepcion.count({
+        where: {
+          trabajadorId,
+          tipo: TipoExcepcion.VENTA_DESCANSO,
+          fecha: {
+            gte: new Date(descansoCorrespondiente.fechaInicio),
+            lte: new Date(descansoCorrespondiente.fechaFin),
+          },
+          NOT: {
+            fecha: fechaObj,
+          },
+        },
+      });
+
+      if (ventasEnCiclo >= 5) {
+        throw new Error(
+          `Reglamento 20x10: Este ciclo de descanso ya cuenta con el tope máximo legal de 5 días vendidos.`
+        );
+      }
     }
 
-    if (tipo === TipoExcepcion.PERMISO && esDescansoBase) {
+    if (tipo === TipoExcepcion.PERMISO && descansoCorrespondiente) {
       throw new Error(
         'Operación inválida: No se puede registrar Permiso en un día que ya es Descanso Libre.'
       );
@@ -238,10 +261,13 @@ export class ProgramacionService {
     return excepcionGuardada;
   }
 
-  public static async eliminarExcepcion(data: { trabajadorId: number; fecha: string }) {
+  public static async eliminarExcepcion(
+    data: { trabajadorId: number; fecha: string },
+    client: any = prisma
+  ) {
     const { trabajadorId, fecha } = data;
     const fechaObj = new Date(`${fecha}T00:00:00.000Z`);
-    return await prisma.excepcion.deleteMany({
+    return await client.excepcion.deleteMany({
       where: {
         trabajadorId,
         fecha: fechaObj,
