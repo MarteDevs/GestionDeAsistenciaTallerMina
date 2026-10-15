@@ -101,26 +101,40 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
 
   if (!isOpen) return null;
 
-  // Toggle de selección de un día específico
+  // Toggle de selección de un día específico con límite estricto de 5 días para venta de descanso
   const toggleDiaSeleccionado = (fechaItem: string) => {
-    setFechasSeleccionadas((prev) =>
-      prev.includes(fechaItem)
-        ? prev.filter((f) => f !== fechaItem)
-        : [...prev, fechaItem].sort()
-    );
+    if (fechasSeleccionadas.includes(fechaItem)) {
+      setFechasSeleccionadas((prev) => prev.filter((f) => f !== fechaItem));
+      setError(null);
+    } else {
+      if (tipo === 'VENTA_DESCANSO') {
+        const diasVendidos = diasBloque.filter((d) => d.estado === 'VD').length;
+        const cupo = Math.max(0, 5 - diasVendidos);
+        if (fechasSeleccionadas.length >= cupo) {
+          setError(`Por normativa 20x10 solo se permite vender un máximo de 5 días por ciclo. Cupo disponible restante: ${cupo} día(s).`);
+          return;
+        }
+      }
+      setError(null);
+      setFechasSeleccionadas((prev) => [...prev, fechaItem].sort());
+    }
   };
 
-  // Seleccionar todos los días disponibles del período de descanso
-  const seleccionarTodosLosDisponibles = () => {
+  // Seleccionar hasta el máximo permitido (máx 5 para venta de descanso)
+  const seleccionarMaximoPermitido = () => {
     const todosDisponibles = diasBloque
       .filter((d) => d.disponibleParaVenta)
       .map((d) => d.fecha);
-    setFechasSeleccionadas(todosDisponibles);
+    const diasVendidos = diasBloque.filter((d) => d.estado === 'VD').length;
+    const cupo = tipo === 'VENTA_DESCANSO' ? Math.max(0, 5 - diasVendidos) : todosDisponibles.length;
+    setFechasSeleccionadas(todosDisponibles.slice(0, cupo));
+    setError(null);
   };
 
   // Desmarcar todos
   const desmarcarTodos = () => {
     setFechasSeleccionadas([]);
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,6 +147,14 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
     if (fechasSeleccionadas.length === 0) {
       setError('Debes seleccionar al menos un día disponible para procesar la transacción.');
       return;
+    }
+
+    if (tipo === 'VENTA_DESCANSO') {
+      const diasVendidos = diasBloque.filter((d) => d.estado === 'VD').length;
+      if (diasVendidos + fechasSeleccionadas.length > 5) {
+        setError(`No se puede vender más de 5 días por ciclo de descanso. Ya tiene ${diasVendidos} vendidos y seleccionó ${fechasSeleccionadas.length}.`);
+        return;
+      }
     }
 
     setLoadingSubmit(true);
@@ -226,7 +248,7 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
                 onClick={() => setTipo('VENTA_DESCANSO')}
                 className={`flex flex-col p-2.5 rounded-xl border text-left transition-all ${
                   tipo === 'VENTA_DESCANSO'
-                    ? 'border-emerald-500 bg-emerald-50/80 ring-2 ring-emerald-500/20 shadow-xs'
+                    ? 'border-emerald-500 bg-emerald-50/80 ring-2 ring-emerald-500/20 shadow-sm'
                     : 'border-slate-200 hover:border-slate-300 bg-white disabled:opacity-40'
                 }`}
               >
@@ -235,7 +257,7 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
                   <span className="text-xs font-bold text-emerald-900">Venta de Descanso (VD)</span>
                 </div>
                 <span className="text-[10px] text-slate-500 mt-0.5">
-                  Trabajar en días programados libres (DL)
+                  Trabajar en días programados libres (DL) - Máx. 5 días
                 </span>
               </button>
 
@@ -244,7 +266,7 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
                 onClick={() => setTipo('PERMISO')}
                 className={`flex flex-col p-2.5 rounded-xl border text-left transition-all ${
                   tipo === 'PERMISO'
-                    ? 'border-rose-500 bg-rose-50/80 ring-2 ring-rose-500/20 shadow-xs'
+                    ? 'border-rose-500 bg-rose-50/80 ring-2 ring-rose-500/20 shadow-sm'
                     : 'border-slate-200 hover:border-slate-300 bg-white'
                 }`}
               >
@@ -271,7 +293,8 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
                     <span>Días Libres de este Período ({diasBloque.length} días totales)</span>
                   </h4>
                   <div className="text-[11px] text-purple-800 space-x-2 mt-0.5">
-                    <span>Disponibles para vender: <b>{diasDisponiblesTotales}</b></span>
+                    <span>Disponibles: <b>{diasDisponiblesTotales}</b></span>
+                    <span className="text-amber-700">| Cupo legal restante: <b>{Math.max(0, 5 - diasVendidosPreviamente)}</b> / 5</span>
                     {diasVendidosPreviamente > 0 && (
                       <span className="text-emerald-700">| Ya vendidos: <b>{diasVendidosPreviamente}</b></span>
                     )}
@@ -281,15 +304,15 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
                 <div className="flex items-center space-x-1.5 text-xs">
                   <button
                     type="button"
-                    onClick={seleccionarTodosLosDisponibles}
-                    className="px-2 py-1 rounded bg-purple-200 hover:bg-purple-300 text-purple-900 font-bold text-[10px] transition"
+                    onClick={seleccionarMaximoPermitido}
+                    className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] shadow-sm transition"
                   >
-                    Marcar Todos ({diasDisponiblesTotales})
+                    Marcar Permitidos (Máx. 5)
                   </button>
                   <button
                     type="button"
                     onClick={desmarcarTodos}
-                    className="px-2 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 font-semibold text-[10px] border border-purple-200 transition"
+                    className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-semibold text-[10px] border border-purple-200 transition"
                   >
                     Limpiar
                   </button>

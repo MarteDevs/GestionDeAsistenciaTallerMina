@@ -11,6 +11,8 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Query
 
+import com.mars.asistenciamina.data.models.TrabajadoresListResponse
+
 interface AsistenciaApiService {
 
     @POST("auth/login")
@@ -23,6 +25,11 @@ interface AsistenciaApiService {
         @Query("fechaReferencia") fechaReferencia: String? = null,
         @Query("diasVentana") diasVentana: Int = 7
     ): ProximosTurnosResponse
+
+    @GET("trabajadores")
+    suspend fun getTrabajadores(
+        @Query("incluirInactivos") incluirInactivos: Boolean = false
+    ): TrabajadoresListResponse
 
     @GET("programacion")
     suspend fun getProgramacion(

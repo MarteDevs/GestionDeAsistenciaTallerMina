@@ -82,6 +82,10 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
           }
         }
       );
+      if (res.status === 401) {
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        throw new Error('Sesión expirada o no autorizada');
+      }
       if (!res.ok) {
         throw new Error(`Error en servidor: ${res.statusText}`);
       }
@@ -130,10 +134,10 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
   return (
     <div className="w-full space-y-5 animate-in fade-in duration-200">
       {/* Top Bar Operativa con Filtros y Fecha */}
-      <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 shadow-xs">
+            <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 shadow-sm">
               <Calendar className="w-5 h-5" />
             </div>
             <div>
@@ -181,6 +185,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
                 <option value="TODAS">Todas las Áreas</option>
                 <option value="Principal">Taller Principal</option>
                 <option value="Externa">Carpintería Externa</option>
+                <option value="Operaciones Especiales">Operaciones Especiales</option>
               </select>
             </div>
 
@@ -197,7 +202,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
             {/* Acceso Directo a la Planilla */}
             <button
               onClick={onVerPlanilla}
-              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-xs hover:shadow-md transition active:scale-95"
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-sm hover:shadow-md transition active:scale-95"
             >
               <span>Ver en Planilla Mensual</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -209,7 +214,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
       {/* Tarjetas de Métricas Rápidas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Alertas Críticas Hoy */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               Movimientos Hoy
@@ -227,7 +232,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
         </div>
 
         {/* Salidas a Descanso */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               Bajan a Descanso (7d)
@@ -243,7 +248,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
         </div>
 
         {/* Retornos a Mina */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               Suben a Mina (7d)
@@ -259,7 +264,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
         </div>
 
         {/* Ventas de Descanso Activas */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               Ventas de Descanso
@@ -289,7 +294,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Columna 1: Próximos a salir a descanso */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
             <div className="p-3.5 bg-gradient-to-r from-purple-950 to-slate-900 text-white flex items-center justify-between border-b border-purple-900/40">
               <div className="flex items-center space-x-2">
                 <Moon className="w-4 h-4 text-purple-300" />
@@ -312,7 +317,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
                 proximosSalidaDescanso.map((ev) => (
                   <div
                     key={ev.id}
-                    className="p-3 rounded-xl border border-purple-100 bg-purple-50/40 hover:bg-purple-50/80 transition shadow-2xs space-y-1.5"
+                    className="p-3 rounded-xl border border-purple-100 bg-purple-50/40 hover:bg-purple-50/80 transition shadow-sm space-y-1.5"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-900 truncate">
@@ -348,7 +353,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
           </div>
 
           {/* Columna 2: Próximos a retornar / subir a mina */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
             <div className="p-3.5 bg-gradient-to-r from-cyan-950 to-slate-900 text-white flex items-center justify-between border-b border-cyan-900/40">
               <div className="flex items-center space-x-2">
                 <Briefcase className="w-4 h-4 text-cyan-300" />
@@ -371,7 +376,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
                 proximosRetornoMina.map((ev) => (
                   <div
                     key={ev.id}
-                    className="p-3 rounded-xl border border-cyan-100 bg-cyan-50/40 hover:bg-cyan-50/80 transition shadow-2xs space-y-1.5"
+                    className="p-3 rounded-xl border border-cyan-100 bg-cyan-50/40 hover:bg-cyan-50/80 transition shadow-sm space-y-1.5"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-900 truncate">
@@ -407,7 +412,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
           </div>
 
           {/* Columna 3: Ventas de Descanso y Excepciones */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
             <div className="p-3.5 bg-gradient-to-r from-emerald-950 to-slate-900 text-white flex items-center justify-between border-b border-emerald-900/40">
               <div className="flex items-center space-x-2">
                 <DollarSign className="w-4 h-4 text-emerald-300" />
@@ -430,7 +435,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
                 ventasActivas.map((ev) => (
                   <div
                     key={ev.id}
-                    className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50/80 transition shadow-2xs space-y-1.5"
+                    className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50/80 transition shadow-sm space-y-1.5"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-900 truncate">

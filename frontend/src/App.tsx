@@ -62,7 +62,7 @@ const AppContent: React.FC = () => {
                 <h1 className="text-sm font-black tracking-tight leading-none text-white">
                   TALLER CARPINTERÍA
                 </h1>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
                   2026 - 2027
                 </span>
               </div>
@@ -155,7 +155,7 @@ const AppContent: React.FC = () => {
         ) : (
           <>
             {/* Banner Informativo Superior */}
-            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-3.5 px-5 text-white border border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-3.5 px-5 text-white border border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="flex items-center space-x-3">
                 <div className="h-8 w-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
                   <Layers className="w-4 h-4" />
@@ -187,11 +187,11 @@ const AppContent: React.FC = () => {
         )}
       </main>
 
-      {/* Moderno Navbar Dock Flotante (Inferior Izquierda) */}
+      {/* Moderno Navbar Dock Flotante (Inferior Izquierda / Centrado en móviles) */}
       {isAuthenticated && (
         <nav
           aria-label="Navegación principal"
-          className="fixed bottom-6 left-6 z-40 bg-slate-950/95 text-white rounded-2xl p-1.5 shadow-2xl border border-slate-800 backdrop-blur-md flex items-center space-x-1.5 transition-all duration-200"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 sm:bottom-6 sm:left-6 sm:translate-x-0 z-40 bg-slate-950/95 text-white rounded-2xl p-1.5 shadow-2xl border border-slate-800 backdrop-blur-md flex items-center space-x-1.5 transition-all duration-200"
         >
           {/* Botón Dashboard */}
           <button
@@ -208,7 +208,7 @@ const AppContent: React.FC = () => {
             {/* Badge sutil de alertas si hay eventos hoy */}
             {conteoAlertasHoy > 0 && (
               <span
-                className={`ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-black leading-none ${
+                className={`ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-black leading-none ${
                   vistaActiva === 'dashboard'
                     ? 'bg-slate-950 text-amber-400 ring-1 ring-amber-400/30'
                     : 'bg-rose-500 text-white animate-pulse'

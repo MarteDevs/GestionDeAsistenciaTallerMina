@@ -27,6 +27,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const savedUser = localStorage.getItem('mina_usuario');
     if (savedToken && savedUser) {
       try {
+        const parts = savedToken.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          if (payload.exp && payload.exp * 1000 < Date.now()) {
+            localStorage.removeItem('mina_token');
+            localStorage.removeItem('mina_usuario');
+            return;
+          }
+        }
         setToken(savedToken);
         setUsuario(JSON.parse(savedUser));
       } catch (e) {
@@ -34,6 +43,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('mina_usuario');
       }
     }
+
+    const handleUnauthorized = () => {
+      logout();
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
   }, []);
 
   const login = (newToken: string, newUsuario: Usuario) => {

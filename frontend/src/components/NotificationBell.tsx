@@ -29,7 +29,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onSelectFech
   const { token, isAuthenticated } = useAuth();
   const [abierto, setAbierto] = useState(false);
   const [cargando, setCargando] = useState(false);
-  const [fechaReferencia, setFechaReferencia] = useState('2026-10-13'); // Valor de prueba solicitado por usuario
+  const [fechaReferencia, setFechaReferencia] = useState(() => {
+    const hoy = new Date();
+    const anio = hoy.getFullYear() >= 2026 ? hoy.getFullYear() : 2026;
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
+  });
   const [eventos, setEventos] = useState<EventoNotificacion[]>([]);
   const [resumen, setResumen] = useState<ResumenNotificaciones | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -93,7 +99,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onSelectFech
       >
         <Bell className="w-4 h-4" />
         {resumen && resumen.total > 0 && (
-          <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-500 text-white shadow-sm ring-2 ring-slate-950 animate-pulse">
+          <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-rose-500 text-white shadow-sm ring-2 ring-slate-950 animate-pulse">
             {resumen.total}
           </span>
         )}

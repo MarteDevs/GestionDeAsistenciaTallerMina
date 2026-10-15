@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -75,7 +76,7 @@ fun AsistenciaMinaApp() {
     val context = LocalContext.current
     var isAuthenticated by rememberSaveable { mutableStateOf(SessionManager.isLoggedIn()) }
     var currentTab by rememberSaveable { mutableStateOf(NavigationTab.HOME) }
-    var selectedTrabajador by rememberSaveable { mutableStateOf<TrabajadorDto?>(null) }
+    var selectedTrabajador by remember { mutableStateOf<TrabajadorDto?>(null) }
 
     // Solicitar permisos de notificación en Android 13+ (TIRAMISU)
     val permissionLauncher = rememberLauncherForActivityResult(

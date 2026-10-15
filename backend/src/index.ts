@@ -30,6 +30,7 @@ app.get('/api/programacion', ProgramacionController.getGrilla);
 app.get('/api/programacion/bloque-descanso', ProgramacionController.getDetalleBloqueDescanso);
 app.post('/api/excepciones', authMiddleware, ProgramacionController.crearExcepcion);
 app.post('/api/excepciones/rango', authMiddleware, TrabajadorController.registrarExcepcionesRango);
+app.delete('/api/excepciones', authMiddleware, ProgramacionController.eliminarExcepcion);
 
 // 3. Gestión de Trabajadores y Proyección 20x10
 app.get('/api/trabajadores', authMiddleware, TrabajadorController.listar);

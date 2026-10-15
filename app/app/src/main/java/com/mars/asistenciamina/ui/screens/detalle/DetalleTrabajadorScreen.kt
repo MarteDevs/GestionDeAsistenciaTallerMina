@@ -73,12 +73,17 @@ import com.mars.asistenciamina.ui.theme.Slate950
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleTrabajadorScreen(
     trabajador: TrabajadorDto,
     onBack: () -> Unit
 ) {
+    BackHandler(onBack = onBack)
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var selectedDescanso by remember { mutableStateOf<DescansoDto?>(trabajador.descansos.firstOrNull()) }
@@ -144,18 +149,22 @@ fun DetalleTrabajadorScreen(
                 ) {
                     Button(
                         onClick = {
+                            if (selectedFechas.size > 5) {
+                                scope.launch { snackbarHostState.showSnackbar("Régimen 20x10: Máximo 5 días de venta por ciclo.") }
+                                return@Button
+                            }
                             scope.launch {
                                 guardando = true
                                 try {
-                                    ApiClient.apiService.registrarExcepcionRango(
+                                    val res = ApiClient.apiService.registrarExcepcionRango(
                                         ExcepcionRangoRequest(
                                             trabajadorId = trabajador.id,
                                             fechas = selectedFechas.toList(),
                                             tipo = "VENTA_DESCANSO",
-                                            observacion = "Venta registrada desde App Android Móvil"
+                                            motivo = "Venta registrada desde App Android Móvil"
                                         )
                                     )
-                                    snackbarHostState.showSnackbar("¡${selectedFechas.size} días guardados como Venta (VD)!")
+                                    snackbarHostState.showSnackbar(res.message.ifBlank { "¡${selectedFechas.size} días guardados como Venta (VD)!" })
                                     selectedFechas.clear()
                                 } catch (e: Exception) {
                                     snackbarHostState.showSnackbar("Error: ${e.localizedMessage}")
@@ -312,8 +321,15 @@ fun DetalleTrabajadorScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                if (isChecked) selectedFechas.remove(diaIso)
-                                else selectedFechas.add(diaIso)
+                                if (isChecked) {
+                                    selectedFechas.remove(diaIso)
+                                } else {
+                                    if (selectedFechas.size >= 5) {
+                                        scope.launch { snackbarHostState.showSnackbar("Régimen 20x10: Solo se permite vender hasta 5 días por ciclo.") }
+                                    } else {
+                                        selectedFechas.add(diaIso)
+                                    }
+                                }
                             },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
@@ -330,9 +346,16 @@ fun DetalleTrabajadorScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
                                     checked = isChecked,
-                                    onCheckedChange = {
-                                        if (it) selectedFechas.add(diaIso)
-                                        else selectedFechas.remove(diaIso)
+                                    onCheckedChange = { check ->
+                                        if (check) {
+                                            if (selectedFechas.size >= 5) {
+                                                scope.launch { snackbarHostState.showSnackbar("Régimen 20x10: Solo se permite vender hasta 5 días por ciclo.") }
+                                            } else {
+                                                selectedFechas.add(diaIso)
+                                            }
+                                        } else {
+                                            selectedFechas.remove(diaIso)
+                                        }
                                     },
                                     colors = CheckboxDefaults.colors(
                                         checkedColor = Amber500,

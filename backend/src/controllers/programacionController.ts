@@ -5,8 +5,9 @@ import { ProgramacionService } from '../services/programacionService';
 export class ProgramacionController {
   public static async getGrilla(req: Request, res: Response): Promise<void> {
     try {
-      const anio = parseInt(req.query.anio as string) || new Date().getUTCFullYear();
-      const mes = parseInt(req.query.mes as string) || new Date().getUTCMonth() + 1;
+      const fechaPeru = ProgramacionService.getFechaHoyPeru();
+      const anio = req.query.anio ? parseInt(req.query.anio as string) : fechaPeru.anio;
+      const mes = req.query.mes ? parseInt(req.query.mes as string) : fechaPeru.mes;
 
       if (isNaN(anio) || isNaN(mes) || mes < 1 || mes > 12) {
         res.status(400).json({
@@ -27,6 +28,27 @@ export class ProgramacionController {
         success: false,
         error: error.message || 'Error interno al procesar la grilla de programación.',
       });
+    }
+  }
+
+  public static async eliminarExcepcion(req: Request, res: Response): Promise<void> {
+    try {
+      const { trabajadorId, fecha } = req.body;
+      if (!trabajadorId || !fecha) {
+        res.status(400).json({ success: false, error: 'trabajadorId y fecha son requeridos' });
+        return;
+      }
+      await ProgramacionService.eliminarExcepcion({
+        trabajadorId: Number(trabajadorId),
+        fecha: String(fecha),
+      });
+      res.json({
+        success: true,
+        message: 'Excepción eliminada correctamente. El día ha vuelto a su estado original.',
+      });
+    } catch (error: any) {
+      console.error('Error al eliminar excepción:', error);
+      res.status(500).json({ success: false, error: error.message });
     }
   }
 

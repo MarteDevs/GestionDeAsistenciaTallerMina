@@ -20,7 +20,9 @@ declare global {
   }
 }
 
-export const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+import { prisma } from '../prisma';
+
+export const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -36,15 +38,28 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AuthUserPayload;
 
-    if (decoded.estado !== 'ACTIVO') {
+    // Verificar en tiempo real el estado activo del usuario en la base de datos
+    const usuarioVivo = await prisma.usuario.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, rol: true, estado: true, nombres: true, email: true, username: true },
+    });
+
+    if (!usuarioVivo || usuarioVivo.estado !== 'ACTIVO') {
       res.status(403).json({
         success: false,
-        error: 'Tu cuenta no está activa o se encuentra pendiente de aprobación.',
+        error: 'Tu cuenta ha sido desactivada, rechazada o no existe.',
       });
       return;
     }
 
-    req.usuario = decoded;
+    req.usuario = {
+      id: usuarioVivo.id,
+      email: usuarioVivo.email,
+      username: usuarioVivo.username,
+      nombres: usuarioVivo.nombres,
+      rol: usuarioVivo.rol,
+      estado: usuarioVivo.estado,
+    };
     next();
   } catch (error) {
     res.status(401).json({

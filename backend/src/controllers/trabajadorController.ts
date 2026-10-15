@@ -12,6 +12,9 @@ export class TrabajadorController {
         where,
         orderBy: { nombres: 'asc' },
         include: {
+          descansosProgramados: {
+            orderBy: { fechaInicio: 'asc' },
+          },
           _count: {
             select: { descansosProgramados: true, excepciones: true },
           },
@@ -183,7 +186,8 @@ export class TrabajadorController {
 
   public static async registrarExcepcionesRango(req: Request, res: Response): Promise<void> {
     try {
-      const { trabajadorId, fechas, tipo, motivo } = req.body;
+      const { trabajadorId, fechas, tipo } = req.body;
+      const motivo = req.body.motivo || req.body.observacion;
 
       if (!trabajadorId || !fechas || !Array.isArray(fechas) || fechas.length === 0 || !tipo) {
         res.status(400).json({
@@ -193,21 +197,37 @@ export class TrabajadorController {
         return;
       }
 
-      const resultados = [];
-      for (const f of fechas) {
-        const guardado = await ProgramacionService.registrarExcepcion({
-          trabajadorId: Number(trabajadorId),
-          fecha: f,
-          tipo,
-          motivo,
+      if (tipo === 'VENTA_DESCANSO' && fechas.length > 5) {
+        res.status(400).json({
+          success: false,
+          error: 'Reglamento 20x10: No se pueden vender más de 5 días de descanso por ciclo.',
         });
-        resultados.push(guardado);
+        return;
       }
+
+      // Ejecutar dentro de una transacción atómica para garantizar que no haya grabaciones parciales
+      const resultados = await prisma.$transaction(async (tx) => {
+        const guardados = [];
+        for (const f of fechas) {
+          const guardado = await ProgramacionService.registrarExcepcion(
+            {
+              trabajadorId: Number(trabajadorId),
+              fecha: f,
+              tipo,
+              motivo,
+            },
+            tx
+          );
+          guardados.push(guardado);
+        }
+        return guardados;
+      });
 
       res.status(201).json({
         success: true,
         data: resultados,
         total: resultados.length,
+        agregados: resultados.length,
         message: `Se registraron exitosamente ${resultados.length} días de ${tipo === 'VENTA_DESCANSO' ? 'Venta de Descanso' : 'Permiso'}.`,
       });
     } catch (error: any) {

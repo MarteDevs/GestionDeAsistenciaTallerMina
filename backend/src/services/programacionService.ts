@@ -39,6 +39,19 @@ export interface GrillaMensualResponse {
 }
 
 export class ProgramacionService {
+  public static getFechaHoyPeru(): { anio: number; mes: number; dia: number; fechaIso: string; dateUtc: Date } {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Lima',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const fechaIso = formatter.format(new Date()); // 'YYYY-MM-DD'
+    const [anio, mes, dia] = fechaIso.split('-').map(Number);
+    const dateUtc = new Date(Date.UTC(anio, mes - 1, dia));
+    return { anio, mes, dia, fechaIso, dateUtc };
+  }
+
   public static formatFechaIso(date: Date): string {
     const y = date.getUTCFullYear();
     const m = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -162,16 +175,19 @@ export class ProgramacionService {
     };
   }
 
-  public static async registrarExcepcion(data: {
-    trabajadorId: number;
-    fecha: string;
-    tipo: TipoExcepcion;
-    motivo?: string;
-  }) {
+  public static async registrarExcepcion(
+    data: {
+      trabajadorId: number;
+      fecha: string;
+      tipo: TipoExcepcion;
+      motivo?: string;
+    },
+    client: any = prisma
+  ) {
     const { trabajadorId, fecha, tipo, motivo } = data;
     const fechaObj = new Date(`${fecha}T00:00:00.000Z`);
 
-    const trabajador = await prisma.trabajador.findUnique({
+    const trabajador = await client.trabajador.findUnique({
       where: { id: trabajadorId },
       include: {
         descansosProgramados: true,
@@ -182,7 +198,7 @@ export class ProgramacionService {
       throw new Error('El trabajador especificado no existe o está inactivo.');
     }
 
-    const esDescansoBase = trabajador.descansosProgramados.some((dp) => {
+    const esDescansoBase = trabajador.descansosProgramados.some((dp: any) => {
       const inicio = new Date(dp.fechaInicio);
       const fin = new Date(dp.fechaFin);
       return fechaObj >= inicio && fechaObj <= fin;
@@ -200,7 +216,7 @@ export class ProgramacionService {
       );
     }
 
-    const excepcionGuardada = await prisma.excepcion.upsert({
+    const excepcionGuardada = await client.excepcion.upsert({
       where: {
         trabajadorId_fecha: {
           trabajadorId,
@@ -220,5 +236,16 @@ export class ProgramacionService {
     });
 
     return excepcionGuardada;
+  }
+
+  public static async eliminarExcepcion(data: { trabajadorId: number; fecha: string }) {
+    const { trabajadorId, fecha } = data;
+    const fechaObj = new Date(`${fecha}T00:00:00.000Z`);
+    return await prisma.excepcion.deleteMany({
+      where: {
+        trabajadorId,
+        fecha: fechaObj,
+      },
+    });
   }
 }

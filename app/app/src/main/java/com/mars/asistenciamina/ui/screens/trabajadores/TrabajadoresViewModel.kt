@@ -24,12 +24,12 @@ class TrabajadoresViewModel : ViewModel() {
         cargarColaboradores()
     }
 
-    fun cargarColaboradores(anio: Int = 2026) {
+    fun cargarColaboradores() {
         viewModelScope.launch {
             _uiState.value = TrabajadoresUiState.Loading
             try {
-                val response = ApiClient.apiService.getProgramacion(anio = anio)
-                _uiState.value = TrabajadoresUiState.Success(response.trabajadores)
+                val response = ApiClient.apiService.getTrabajadores(incluirInactivos = false)
+                _uiState.value = TrabajadoresUiState.Success(response.data)
             } catch (e: Exception) {
                 _uiState.value = TrabajadoresUiState.Error(
                     e.localizedMessage ?: "Error al obtener colaboradores"

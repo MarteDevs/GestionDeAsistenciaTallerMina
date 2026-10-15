@@ -82,26 +82,34 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
     estadoActual: '',
   });
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/programacion?anio=${anio}&mes=${mes}`);
-      const json = await response.json();
-      if (json.success) {
-        setData(json.data);
-      }
-    } catch (err) {
-      console.error('Error al cargar la programación:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [internalRefresh, setInternalRefresh] = useState(0);
+  const fetchData = () => setInternalRefresh((prev) => prev + 1);
 
   useEffect(() => {
-    fetchData();
-  }, [anio, mes, refreshTrigger]);
+    const controller = new AbortController();
+    setLoading(true);
+
+    fetch(`/api/programacion?anio=${anio}&mes=${mes}`, { signal: controller.signal })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) {
+          setData(json.data);
+        }
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Error al cargar la programación:', err);
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [anio, mes, refreshTrigger, internalRefresh]);
 
   const handleMesAnterior = () => {
+    if (anio <= 2025 && mes === 1) return;
     if (mes === 1) {
       setMes(12);
       setAnio((prev) => prev - 1);
@@ -111,6 +119,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
   };
 
   const handleMesSiguiente = () => {
+    if (anio >= 2027 && mes === 12) return;
     if (mes === 12) {
       setMes(1);
       setAnio((prev) => prev + 1);
@@ -142,9 +151,9 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
       case 'DL':
         return <span className="font-extrabold text-[10px] tracking-tight text-purple-700">DL</span>;
       case 'VD':
-        return <span className="font-black text-[9px] px-1 py-0.5 rounded bg-emerald-500 text-white shadow-xs">VD</span>;
+        return <span className="font-black text-[9px] px-1 py-0.5 rounded bg-emerald-500 text-white shadow-sm">VD</span>;
       case 'P':
-        return <span className="font-black text-[9px] px-1 py-0.5 rounded bg-rose-500 text-white shadow-xs">P</span>;
+        return <span className="font-black text-[9px] px-1 py-0.5 rounded bg-rose-500 text-white shadow-sm">P</span>;
       default:
         return null;
     }
@@ -174,7 +183,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
   return (
     <div className="w-full space-y-3">
       {/* Barra de Control y Navegación */}
-      <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           {/* Navegador de Fecha */}
           <div className="flex items-center space-x-3">
@@ -184,7 +193,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
             <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
               <button
                 onClick={handleMesAnterior}
-                className="p-1 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 shadow-xs transition"
+                className="p-1 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm transition"
                 title="Mes anterior"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -215,7 +224,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
               </div>
               <button
                 onClick={handleMesSiguiente}
-                className="p-1 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 shadow-xs transition"
+                className="p-1 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm transition"
                 title="Mes siguiente"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -244,8 +253,9 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                 className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
               >
                 <option value="TODAS">Todas las Áreas</option>
-                <option value="Taller Carpintería Principal">Principal</option>
-                <option value="Carpintería Externa">Externa</option>
+                <option value="Taller Carpintería Principal">Taller Principal</option>
+                <option value="Carpintería Externa">Carpintería Externa</option>
+                <option value="Operaciones Especiales">Operaciones Especiales</option>
               </select>
             </div>
           </div>
@@ -294,7 +304,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
           No hay datos disponibles para el período.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-xs text-center select-none table-fixed">
               <thead>
@@ -341,7 +351,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                       </th>
                     );
                   })}
-                  <th colSpan={4} className="p-1 bg-slate-850 text-[9px] uppercase tracking-wider text-amber-400 text-center font-black">
+                  <th colSpan={4} className="p-1 bg-slate-800 text-[9px] uppercase tracking-wider text-amber-400 text-center font-black">
                     Saldos
                   </th>
                 </tr>
@@ -401,22 +411,22 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
 
                       {/* Totales Resaltantes y Legibles */}
                       <td className="p-1 border-r border-slate-200 w-[42px] min-w-[42px] max-w-[42px] text-center bg-slate-100/60">
-                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-slate-900 text-white font-black text-[11px] shadow-xs">
+                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-slate-900 text-white font-black text-[11px] shadow-sm">
                           {fila.resumen.totalTrabajados}
                         </div>
                       </td>
                       <td className="p-1 border-r border-purple-200 w-[42px] min-w-[42px] max-w-[42px] text-center bg-purple-50/50">
-                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-purple-600 text-white font-black text-[11px] shadow-xs">
+                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-purple-600 text-white font-black text-[11px] shadow-sm">
                           {fila.resumen.totalDescansos}
                         </div>
                       </td>
                       <td className="p-1 border-r border-emerald-200 w-[42px] min-w-[42px] max-w-[42px] text-center bg-emerald-50/50">
-                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-emerald-600 text-white font-black text-[11px] shadow-xs">
+                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-emerald-600 text-white font-black text-[11px] shadow-sm">
                           {fila.resumen.totalVentas}
                         </div>
                       </td>
                       <td className="p-1 w-[42px] min-w-[42px] max-w-[42px] text-center bg-rose-50/50">
-                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-rose-600 text-white font-black text-[11px] shadow-xs">
+                        <div className="inline-flex items-center justify-center min-w-[26px] h-6 px-1 rounded-md bg-rose-600 text-white font-black text-[11px] shadow-sm">
                           {fila.resumen.totalPermisos}
                         </div>
                       </td>

@@ -67,6 +67,9 @@ import com.mars.asistenciamina.ui.theme.Slate200
 import com.mars.asistenciamina.ui.theme.Slate400
 import com.mars.asistenciamina.ui.theme.Slate800
 import com.mars.asistenciamina.ui.theme.Slate900
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import com.mars.asistenciamina.ui.theme.Slate950
 import androidx.compose.material.icons.automirrored.filled.Logout
 import com.mars.asistenciamina.data.local.SessionManager
@@ -82,12 +85,16 @@ fun HomeScreen(
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     val usuarioActual = remember { SessionManager.getUser() }
+    var yaNotificado by rememberSaveable { mutableStateOf(false) }
 
-    // Si hay eventos cargados, notificar automáticamente en la barra de notificaciones
+    // Si hay eventos cargados, notificar automáticamente en la barra de notificaciones una sola vez por sesión
     LaunchedEffect(state) {
-        if (state is HomeUiState.Success) {
+        if (state is HomeUiState.Success && !yaNotificado) {
             val eventos = (state as HomeUiState.Success).eventos
-            NotificationHelper.notifyUpcomingShifts(context, eventos)
+            if (eventos.isNotEmpty()) {
+                NotificationHelper.notifyUpcomingShifts(context, eventos)
+                yaNotificado = true
+            }
         }
     }
 

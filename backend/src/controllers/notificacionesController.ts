@@ -31,13 +31,12 @@ export class NotificacionesController {
       const fechaRefQuery = req.query.fechaReferencia as string;
       const diasVentana = parseInt(req.query.diasVentana as string) || 7;
 
-      const hoy = fechaRefQuery
+      const fechaPeru = ProgramacionService.getFechaHoyPeru();
+      const hoyUtc = fechaRefQuery
         ? new Date(`${fechaRefQuery}T00:00:00.000Z`)
-        : new Date();
+        : fechaPeru.dateUtc;
 
-      const hoyUtc = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate()));
       const limiteUtc = new Date(hoyUtc.getTime() + diasVentana * 24 * 60 * 60 * 1000);
-
       const fechaHoyStr = ProgramacionService.formatFechaIso(hoyUtc);
 
       // 1. Obtener todos los trabajadores activos con sus descansos y excepciones en la ventana
@@ -124,6 +123,26 @@ export class NotificacionesController {
               descripcion: diffDias === 0
                 ? `${t.nombres} termina hoy su descanso. Reincorporación mañana ${subidaStr}.`
                 : `${t.nombres} termina descanso en ${diffDias} ${diffDias === 1 ? 'día' : 'días'}. Reincorporación el ${subidaStr}.`,
+              detalle: {
+                fechaInicio: fiStr,
+                fechaFin: ffStr,
+                cantidadDias: dp.cantidadDias,
+              },
+            });
+          }
+
+          // Evento A2: Descanso en curso hoy que finaliza más allá de la ventana
+          if (fiDate < hoyUtc && ffDate >= hoyUtc && ffDate > limiteUtc) {
+            const diasParaFin = Math.round((ffDate.getTime() - hoyUtc.getTime()) / (1000 * 60 * 60 * 24));
+            eventos.push({
+              id: `descanso-curso-${t.id}-${fiStr}`,
+              tipo: 'INICIO_DESCANSO',
+              trabajadorId: t.id,
+              nombres: t.nombres,
+              area: t.area,
+              fechaEvento: fechaHoyStr,
+              diasRestantes: 0,
+              descripcion: `${t.nombres} se encuentra actualmente en descanso programado (quedan ${diasParaFin} días, hasta ${ffStr}).`,
               detalle: {
                 fechaInicio: fiStr,
                 fechaFin: ffStr,
