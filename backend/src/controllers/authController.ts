@@ -7,7 +7,7 @@ import { prisma } from '../prisma';
 export class AuthController {
   public static async registro(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, nombres } = req.body;
+      const { email, password, nombres, username } = req.body;
 
       if (!email || !password || !nombres) {
         res.status(400).json({
@@ -18,15 +18,21 @@ export class AuthController {
       }
 
       const emailNormalizado = email.toLowerCase().trim();
+      const usernameNormalizado = username ? username.trim() : null;
 
-      const usuarioExiste = await prisma.usuario.findUnique({
-        where: { email: emailNormalizado },
+      const usuarioExiste = await prisma.usuario.findFirst({
+        where: {
+          OR: [
+            { email: emailNormalizado },
+            ...(usernameNormalizado ? [{ username: usernameNormalizado }] : []),
+          ],
+        },
       });
 
       if (usuarioExiste) {
         res.status(409).json({
           success: false,
-          error: 'Ya existe una cuenta registrada con este correo electrónico.',
+          error: 'Ya existe una cuenta registrada con este correo o usuario.',
         });
         return;
       }
@@ -36,6 +42,7 @@ export class AuthController {
       const nuevoUsuario = await prisma.usuario.create({
         data: {
           email: emailNormalizado,
+          username: usernameNormalizado,
           password: passwordHash,
           nombres: nombres.trim(),
           rol: RolUsuario.SUPERVISOR,
@@ -44,6 +51,7 @@ export class AuthController {
         select: {
           id: true,
           email: true,
+          username: true,
           nombres: true,
           rol: true,
           estado: true,
@@ -67,20 +75,32 @@ export class AuthController {
 
   public static async login(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password } = req.body;
+      const identificador = (req.body.identificador || req.body.email || req.body.usuario || '').trim();
+      const { password } = req.body;
 
-      if (!email || !password) {
+      if (!identificador || !password) {
         res.status(400).json({
           success: false,
-          error: 'Ingresa correo y contraseña.',
+          error: 'Ingresa usuario o correo electrónico y contraseña.',
         });
         return;
       }
 
-      const emailNormalizado = email.toLowerCase().trim();
+      const term = identificador;
+      const termLower = identificador.toLowerCase();
+      const emailEquivalente = termLower.includes('@') ? termLower : `${termLower}@tallermina.com`;
 
-      const usuario = await prisma.usuario.findUnique({
-        where: { email: emailNormalizado },
+      const usuario = await prisma.usuario.findFirst({
+        where: {
+          OR: [
+            { username: term },
+            { username: termLower },
+            { username: term.toUpperCase() },
+            { email: termLower },
+            { email: term },
+            { email: emailEquivalente },
+          ],
+        },
       });
 
       if (!usuario) {
@@ -121,6 +141,7 @@ export class AuthController {
       const token = signToken({
         id: usuario.id,
         email: usuario.email,
+        username: usuario.username,
         nombres: usuario.nombres,
         rol: usuario.rol,
         estado: usuario.estado,
@@ -133,6 +154,7 @@ export class AuthController {
           usuario: {
             id: usuario.id,
             email: usuario.email,
+            username: usuario.username,
             nombres: usuario.nombres,
             rol: usuario.rol,
           },
@@ -160,6 +182,7 @@ export class AuthController {
         select: {
           id: true,
           email: true,
+          username: true,
           nombres: true,
           rol: true,
           estado: true,

@@ -6,6 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'taller_mina_super_secret_jwt_key_2
 export interface AuthUserPayload {
   id: number;
   email: string;
+  username?: string | null;
   nombres: string;
   rol: 'ADMIN' | 'SUPERVISOR' | 'TRABAJADOR';
   estado: 'PENDIENTE' | 'ACTIVO' | 'RECHAZADO';

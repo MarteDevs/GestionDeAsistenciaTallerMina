@@ -10,7 +10,7 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { login } = useAuth();
   const [esRegistro, setEsRegistro] = useState(false);
-  const [email, setEmail] = useState('');
+  const [identificador, setIdentificador] = useState('');
   const [password, setPassword] = useState('');
   const [nombres, setNombres] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,8 +28,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     try {
       const endpoint = esRegistro ? '/api/auth/registro' : '/api/auth/login';
       const payload = esRegistro
-        ? { email, password, nombres }
-        : { email, password };
+        ? { email: identificador.trim(), password, nombres: nombres.trim() }
+        : { identificador: identificador.trim(), email: identificador.trim(), password };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -118,14 +118,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-              Correo Electrónico
+              {esRegistro ? 'Correo Electrónico' : 'Usuario o Correo Electrónico'}
             </label>
             <input
-              type="email"
+              type={esRegistro ? 'email' : 'text'}
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="correo@tallermina.com"
+              value={identificador}
+              onChange={(e) => setIdentificador(e.target.value)}
+              placeholder={esRegistro ? 'correo@tallermina.com' : 'Ej. JORGE o correo@tallermina.com'}
+              autoCapitalize="none"
+              autoCorrect="off"
               className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition"
             />
           </div>
@@ -143,13 +145,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition"
             />
           </div>
-
-          {!esRegistro && (
-            <div className="rounded-lg bg-amber-50 border border-amber-200/60 p-2 text-[11px] text-amber-800">
-              💡 <b>Credenciales demo para pruebas:</b> <br />
-              Admin: <code className="bg-amber-100 px-1 rounded">admin@tallermina.com</code> / pass: <code className="bg-amber-100 px-1 rounded">admin123</code>
-            </div>
-          )}
 
           <div className="pt-2">
             <button

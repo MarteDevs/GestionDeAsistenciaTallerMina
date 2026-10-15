@@ -85,6 +85,24 @@ fun DetalleTrabajadorScreen(
     val selectedFechas = remember { mutableStateListOf<String>() }
     var guardando by remember { mutableStateOf(false) }
 
+    val diasDelBloque = remember(selectedDescanso?.id) {
+        selectedDescanso?.let { d ->
+            try {
+                val inicio = LocalDate.parse(d.fechaInicio.take(10))
+                val fin = LocalDate.parse(d.fechaFin.take(10))
+                val lista = mutableListOf<String>()
+                var curr = inicio
+                while (!curr.isAfter(fin)) {
+                    lista.add(curr.toString())
+                    curr = curr.plusDays(1)
+                }
+                lista
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } ?: emptyList()
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -275,7 +293,7 @@ fun DetalleTrabajadorScreen(
             }
 
             // Desglose interactivo de los días del bloque seleccionado
-            selectedDescanso?.let { descanso ->
+            if (selectedDescanso != null && diasDelBloque.isNotEmpty()) {
                 item {
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
@@ -287,24 +305,7 @@ fun DetalleTrabajadorScreen(
                     )
                 }
 
-                // Generar lista de días del bloque
-                val dias = remember(descanso.id) {
-                    try {
-                        val inicio = LocalDate.parse(descanso.fechaInicio.take(10))
-                        val fin = LocalDate.parse(descanso.fechaFin.take(10))
-                        val lista = mutableListOf<String>()
-                        var curr = inicio
-                        while (!curr.isAfter(fin)) {
-                            lista.add(curr.toString())
-                            curr = curr.plusDays(1)
-                        }
-                        lista
-                    } catch (e: Exception) {
-                        emptyList()
-                    }
-                }
-
-                items(dias) { diaIso ->
+                items(diasDelBloque) { diaIso ->
                     val isChecked = selectedFechas.contains(diaIso)
 
                     Card(

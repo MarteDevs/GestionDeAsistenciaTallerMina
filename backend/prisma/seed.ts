@@ -234,13 +234,29 @@ async function main() {
   await prisma.trabajador.deleteMany({});
   await prisma.usuario.deleteMany({});
 
-  // 1. Crear Usuarios de Sistema (Administrador y Supervisor)
-  const passwordHash = await bcrypt.hash('admin123', 10);
+  // 1. Crear Usuarios de Sistema (Administrador Principal JORGE, Administrador, Supervisor, etc.)
+  const passwordHashJorge = await bcrypt.hash('POLTAND1', 10);
+  const passwordHashAdmin = await bcrypt.hash('admin123', 10);
 
-  const admin = await prisma.usuario.create({
+  // Administrador Principal: JORGE (password: POLTAND1)
+  await prisma.usuario.create({
+    data: {
+      email: 'jorge@tallermina.com',
+      username: 'JORGE',
+      password: passwordHashJorge,
+      nombres: 'Jorge Polo Tandaypan',
+      rol: RolUsuario.ADMIN,
+      estado: EstadoUsuario.ACTIVO,
+      aprobadoEn: new Date(),
+    },
+  });
+
+  // Administrador secundario
+  await prisma.usuario.create({
     data: {
       email: 'admin@tallermina.com',
-      password: passwordHash,
+      username: 'ADMIN',
+      password: passwordHashAdmin,
       nombres: 'Administrador General',
       rol: RolUsuario.ADMIN,
       estado: EstadoUsuario.ACTIVO,
@@ -248,10 +264,12 @@ async function main() {
     },
   });
 
-  const supervisor = await prisma.usuario.create({
+  // Supervisor de turno
+  await prisma.usuario.create({
     data: {
       email: 'supervisor@tallermina.com',
-      password: passwordHash,
+      username: 'SUPERVISOR',
+      password: passwordHashAdmin,
       nombres: 'Supervisor de Turno',
       rol: RolUsuario.SUPERVISOR,
       estado: EstadoUsuario.ACTIVO,
@@ -263,14 +281,15 @@ async function main() {
   await prisma.usuario.create({
     data: {
       email: 'operador.nuevo@tallermina.com',
-      password: passwordHash,
+      username: 'OPERADOR',
+      password: passwordHashAdmin,
       nombres: 'Juan Nuevo (Solicitud Pendiente)',
       rol: RolUsuario.TRABAJADOR,
       estado: EstadoUsuario.PENDIENTE,
     },
   });
 
-  console.log('Usuarios de prueba creados (Admin, Supervisor, Usuario Pendiente). Password por defecto: admin123');
+  console.log('Usuarios creados: JORGE (ADMIN, pass: POLTAND1), ADMIN, SUPERVISOR y OPERADOR.');
 
   // 2. Insertar Trabajadores y sus Descansos Programados 2026
   let countTrabajadores = 0;

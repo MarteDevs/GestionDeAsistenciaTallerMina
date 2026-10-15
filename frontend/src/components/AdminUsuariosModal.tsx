@@ -5,6 +5,7 @@ import { Users, CheckCircle, XCircle, Clock, ShieldCheck, RefreshCw } from 'luci
 interface UsuarioAdmin {
   id: number;
   email: string;
+  username?: string | null;
   nombres: string;
   rol: 'ADMIN' | 'SUPERVISOR' | 'TRABAJADOR';
   estado: 'PENDIENTE' | 'ACTIVO' | 'RECHAZADO';
@@ -128,7 +129,14 @@ export const AdminUsuariosModal: React.FC<AdminUsuariosModalProps> = ({ isOpen, 
                   {usuarios.map((u) => (
                     <tr key={u.id} className="hover:bg-slate-50/70 transition">
                       <td className="p-3">
-                        <div className="font-semibold text-slate-900 text-sm">{u.nombres}</div>
+                        <div className="font-semibold text-slate-900 text-sm flex items-center gap-1.5">
+                          <span>{u.nombres}</span>
+                          {u.username && (
+                            <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                              @{u.username}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-slate-500">{u.email}</div>
                       </td>
                       <td className="p-3">

@@ -44,6 +44,7 @@ async function dump() {
   sql += `CREATE TABLE \`usuarios\` (\n`;
   sql += `  \`id\` INT NOT NULL AUTO_INCREMENT,\n`;
   sql += `  \`email\` VARCHAR(150) NOT NULL,\n`;
+  sql += `  \`username\` VARCHAR(100) NULL,\n`;
   sql += `  \`password\` VARCHAR(255) NOT NULL,\n`;
   sql += `  \`nombres\` VARCHAR(150) NOT NULL,\n`;
   sql += `  \`rol\` ENUM('ADMIN', 'SUPERVISOR', 'TRABAJADOR') NOT NULL DEFAULT 'SUPERVISOR',\n`;
@@ -52,7 +53,8 @@ async function dump() {
   sql += `  \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n`;
   sql += `  \`updated_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),\n`;
   sql += `  PRIMARY KEY (\`id\`),\n`;
-  sql += `  UNIQUE INDEX \`usuarios_email_key\` (\`email\`)\n`;
+  sql += `  UNIQUE INDEX \`usuarios_email_key\` (\`email\`),\n`;
+  sql += `  UNIQUE INDEX \`usuarios_username_key\` (\`username\`)\n`;
   sql += `) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;\n\n`;
 
   // Tabla trabajadores
@@ -111,12 +113,12 @@ async function dump() {
   // INSERT USUARIOS
   sql += `-- =====================================================\n`;
   sql += `-- CARGA DE USUARIOS (${usuarios.length} registros)\n`;
-  sql += `-- Passwords originales: 'admin123'\n`;
   sql += `-- =====================================================\n`;
-  sql += `INSERT INTO \`usuarios\` (\`id\`, \`email\`, \`password\`, \`nombres\`, \`rol\`, \`estado\`, \`aprobado_en\`) VALUES\n`;
+  sql += `INSERT INTO \`usuarios\` (\`id\`, \`email\`, \`username\`, \`password\`, \`nombres\`, \`rol\`, \`estado\`, \`aprobado_en\`) VALUES\n`;
   const userRows = usuarios.map(u => {
     const apDate = u.aprobadoEn ? `'${u.aprobadoEn.toISOString().slice(0, 19).replace('T', ' ')}'` : 'NULL';
-    return `(${u.id}, '${escapeSql(u.email)}', '${u.password}', '${escapeSql(u.nombres)}', '${u.rol}', '${u.estado}', ${apDate})`;
+    const usernameVal = u.username ? `'${escapeSql(u.username)}'` : 'NULL';
+    return `(${u.id}, '${escapeSql(u.email)}', ${usernameVal}, '${u.password}', '${escapeSql(u.nombres)}', '${u.rol}', '${u.estado}', ${apDate})`;
   });
   sql += userRows.join(',\n') + ';\n\n';
 

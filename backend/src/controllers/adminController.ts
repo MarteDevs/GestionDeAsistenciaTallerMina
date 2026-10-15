@@ -10,6 +10,7 @@ export class AdminController {
         select: {
           id: true,
           email: true,
+          username: true,
           nombres: true,
           rol: true,
           estado: true,
@@ -51,6 +52,7 @@ export class AdminController {
         select: {
           id: true,
           email: true,
+          username: true,
           nombres: true,
           rol: true,
           estado: true,
