@@ -51,7 +51,7 @@ const AppContent: React.FC = () => {
           <div className="flex items-center space-x-2.5">
             <div className="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
               <Database className="w-3.5 h-3.5 text-emerald-400" />
-              <span>MySQL 3306</span>
+              <span>MySQL 3307</span>
             </div>
 
             {/* Auth Buttons / User Profile */}
@@ -113,34 +113,54 @@ const AppContent: React.FC = () => {
 
       {/* Main Content Dashboard */}
       <main className="flex-1 max-w-[1700px] mx-auto w-full p-3 sm:p-5 space-y-3">
-        {/* Banner Informativo */}
-        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-3.5 px-5 text-white border border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="h-8 w-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
-              <Layers className="w-4 h-4" />
+        {!isAuthenticated ? (
+          <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+            <div className="h-16 w-16 rounded-3xl bg-amber-500/20 text-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/10 mb-5">
+              <LogIn className="w-8 h-8 stroke-[2.5]" />
             </div>
-            <div>
-              <h2 className="text-xs font-bold tracking-tight">PROGRAMACIÓN TALLER CARPINTERÍA (RÉGIMEN ATÍPICO 20x10)</h2>
-              <p className="text-[11px] text-slate-400">
-                Las fechas base son inmutables. Haz clic sobre cualquier día para vender o registrar permisos en bloque (1 a 5 días).
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2 text-xs">
+            <h2 className="text-xl font-black text-slate-900 tracking-tight mb-2">
+              Acceso Restringido al Personal Autorizado
+            </h2>
+            <p className="text-sm text-slate-500 max-w-md mb-6 leading-relaxed">
+              La planilla de turnos 20x10 y saldos de descansos de Mina contiene información confidencial de las operaciones de taller. Por favor inicia sesión con tu cuenta de supervisor o administrador para continuar.
+            </p>
             <button
-              onClick={() => {
-                if (!isAuthenticated) setAuthModalOpen(true);
-                else setGestionTrabajadoresOpen(true);
-              }}
-              className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-semibold transition"
+              onClick={() => setAuthModalOpen(true)}
+              className="flex items-center space-x-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/30 transition hover:scale-[1.02] active:scale-[0.98]"
             >
-              + Gestionar Personal / Proyectar 2027
+              <LogIn className="w-4 h-4 stroke-[2.5]" />
+              <span>Iniciar Sesión en el Sistema</span>
             </button>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Banner Informativo */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-3.5 px-5 text-white border border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="flex items-center space-x-3">
+                <div className="h-8 w-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-xs font-bold tracking-tight">PROGRAMACIÓN TALLER CARPINTERÍA (RÉGIMEN ATÍPICO 20x10)</h2>
+                  <p className="text-[11px] text-slate-400">
+                    Las fechas base son inmutables. Haz clic sobre cualquier día para vender o registrar permisos en bloque (1 a 5 días).
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 text-xs">
+                <button
+                  onClick={() => setGestionTrabajadoresOpen(true)}
+                  className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-semibold transition"
+                >
+                  + Gestionar Personal / Proyectar 2027
+                </button>
+              </div>
+            </div>
 
-        {/* Grilla Principal */}
-        <GrillaProgramacion refreshTrigger={refreshTrigger} />
+            {/* Grilla Principal */}
+            <GrillaProgramacion refreshTrigger={refreshTrigger} />
+          </>
+        )}
       </main>
 
       {/* Footer */}

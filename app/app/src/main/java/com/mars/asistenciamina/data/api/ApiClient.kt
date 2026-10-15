@@ -9,9 +9,8 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    // 10.0.2.2 es el alias del host loopback en el Emulador de Android
-    // Si se prueba en dispositivo físico, se reemplaza por la IP local WiFi de la PC (Ej: 192.168.1.X)
-    private const val BASE_URL = "http://10.0.2.2:4000/api/"
+    // Dominio en Producción HTTPS DuckDNS (o http://10.0.2.2:9000/api/ para emulador local)
+    private const val BASE_URL = "https://asistenciamina.duckdns.org/api/"
 
     private val json = Json {
         ignoreUnknownKeys = true
