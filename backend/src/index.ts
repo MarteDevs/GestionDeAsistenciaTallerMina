@@ -1,6 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Application } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import { getDatabaseUrl } from './prisma';
 import { ProgramacionController } from './controllers/programacionController';
 import { AuthController } from './controllers/authController';
 import { AdminController } from './controllers/adminController';
@@ -8,7 +11,7 @@ import { TrabajadorController } from './controllers/trabajadorController';
 import { NotificacionesController } from './controllers/notificacionesController';
 import { authMiddleware, requireAdmin } from './middlewares/authMiddleware';
 
-dotenv.config();
+getDatabaseUrl();
 
 const app: Application = express();
 const PORT = Number(process.env.PORT) || 9005;
