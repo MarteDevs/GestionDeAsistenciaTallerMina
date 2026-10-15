@@ -37,3 +37,7 @@ Thumbs.db
 
 # Antigravity artifacts
 .gemini/
+
+# Android binaries
+*.apk
+*.aab

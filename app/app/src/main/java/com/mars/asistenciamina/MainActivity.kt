@@ -34,9 +34,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mars.asistenciamina.data.local.SessionManager
 import com.mars.asistenciamina.data.models.TrabajadorDto
 import com.mars.asistenciamina.ui.screens.detalle.DetalleTrabajadorScreen
 import com.mars.asistenciamina.ui.screens.home.HomeScreen
+import com.mars.asistenciamina.ui.screens.login.LoginScreen
 import com.mars.asistenciamina.ui.screens.trabajadores.TrabajadoresScreen
 import com.mars.asistenciamina.ui.theme.Amber400
 import com.mars.asistenciamina.ui.theme.Amber500
@@ -49,6 +51,7 @@ import com.mars.asistenciamina.util.NotificationHelper
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SessionManager.init(this)
         NotificationHelper.createNotificationChannel(this)
         enableEdgeToEdge()
         setContent {
@@ -70,6 +73,7 @@ enum class NavigationTab(
 @Composable
 fun AsistenciaMinaApp() {
     val context = LocalContext.current
+    var isAuthenticated by rememberSaveable { mutableStateOf(SessionManager.isLoggedIn()) }
     var currentTab by rememberSaveable { mutableStateOf(NavigationTab.HOME) }
     var selectedTrabajador by rememberSaveable { mutableStateOf<TrabajadorDto?>(null) }
 
@@ -84,7 +88,13 @@ fun AsistenciaMinaApp() {
         }
     }
 
-    if (selectedTrabajador != null) {
+    if (!isAuthenticated) {
+        LoginScreen(
+            onLoginSuccess = {
+                isAuthenticated = true
+            }
+        )
+    } else if (selectedTrabajador != null) {
         DetalleTrabajadorScreen(
             trabajador = selectedTrabajador!!,
             onBack = { selectedTrabajador = null }
@@ -136,7 +146,11 @@ fun AsistenciaMinaApp() {
                 when (tab) {
                     NavigationTab.HOME -> {
                         HomeScreen(
-                            onNavigateToTrabajadores = { currentTab = NavigationTab.EQUIPO }
+                            onNavigateToTrabajadores = { currentTab = NavigationTab.EQUIPO },
+                            onLogout = {
+                                SessionManager.clearSession()
+                                isAuthenticated = false
+                            }
                         )
                     }
                     NavigationTab.EQUIPO -> {

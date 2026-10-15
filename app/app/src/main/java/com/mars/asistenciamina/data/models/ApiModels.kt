@@ -74,3 +74,32 @@ data class ExcepcionRangoResponse(
     val message: String,
     val agregados: Int
 )
+
+@Serializable
+data class LoginRequest(
+    val identificador: String,
+    val password: String
+)
+
+@Serializable
+data class UsuarioDto(
+    val id: Int,
+    val email: String,
+    val username: String? = null,
+    val nombres: String,
+    val rol: String
+)
+
+@Serializable
+data class LoginData(
+    val token: String,
+    val usuario: UsuarioDto
+)
+
+@Serializable
+data class LoginResponse(
+    val success: Boolean,
+    val data: LoginData? = null,
+    val message: String? = null,
+    val error: String? = null
+)

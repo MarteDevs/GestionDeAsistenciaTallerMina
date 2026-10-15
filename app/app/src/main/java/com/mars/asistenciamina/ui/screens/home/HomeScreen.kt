@@ -46,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,16 +68,20 @@ import com.mars.asistenciamina.ui.theme.Slate400
 import com.mars.asistenciamina.ui.theme.Slate800
 import com.mars.asistenciamina.ui.theme.Slate900
 import com.mars.asistenciamina.ui.theme.Slate950
+import androidx.compose.material.icons.automirrored.filled.Logout
+import com.mars.asistenciamina.data.local.SessionManager
 import com.mars.asistenciamina.util.NotificationHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
-    onNavigateToTrabajadores: () -> Unit = {}
+    onNavigateToTrabajadores: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
+    val usuarioActual = remember { SessionManager.getUser() }
 
     // Si hay eventos cargados, notificar automáticamente en la barra de notificaciones
     LaunchedEffect(state) {
@@ -118,7 +123,7 @@ fun HomeScreen(
                                 letterSpacing = 0.5.sp
                             )
                             Text(
-                                text = "Operación 20x10 Mina",
+                                text = if (usuarioActual != null) "Hola, ${usuarioActual.nombres.split(" ").firstOrNull() ?: usuarioActual.nombres}" else "Operación 20x10 Mina",
                                 fontSize = 10.sp,
                                 color = Slate400
                             )
@@ -143,6 +148,13 @@ fun HomeScreen(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Actualizar",
                             tint = Color.White
+                        )
+                    }
+                    IconButton(onClick = onLogout) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = "Cerrar Sesión",
+                            tint = Rose500
                         )
                     }
                 }

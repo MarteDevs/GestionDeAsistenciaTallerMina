@@ -3,6 +3,8 @@ package com.mars.asistenciamina.data.api
 import com.mars.asistenciamina.data.models.ExcepcionRangoRequest
 import com.mars.asistenciamina.data.models.ExcepcionRangoResponse
 import com.mars.asistenciamina.data.models.GrillaResponse
+import com.mars.asistenciamina.data.models.LoginRequest
+import com.mars.asistenciamina.data.models.LoginResponse
 import com.mars.asistenciamina.data.models.ProximosTurnosResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -10,6 +12,11 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface AsistenciaApiService {
+
+    @POST("auth/login")
+    suspend fun login(
+        @Body request: LoginRequest
+    ): LoginResponse
 
     @GET("notificaciones/proximos-turnos")
     suspend fun getProximosTurnos(
