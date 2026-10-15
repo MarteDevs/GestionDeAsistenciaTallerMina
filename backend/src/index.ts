@@ -11,7 +11,8 @@ import { authMiddleware, requireAdmin } from './middlewares/authMiddleware';
 dotenv.config();
 
 const app: Application = express();
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT) || 9000;
+const HOST = process.env.HOST || '127.0.0.1';
 
 app.use(cors());
 app.use(express.json());
@@ -50,6 +51,6 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`[BACKEND] Servidor corriendo en http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`[BACKEND] Servidor corriendo en http://${HOST}:${PORT}`);
 });

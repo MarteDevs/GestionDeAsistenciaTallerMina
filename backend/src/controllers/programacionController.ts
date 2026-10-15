@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { ProgramacionService } from '../services/programacionService';
-
-const prisma = new PrismaClient();
 
 export class ProgramacionController {
   public static async getGrilla(req: Request, res: Response): Promise<void> {

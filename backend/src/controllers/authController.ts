@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient, RolUsuario, EstadoUsuario } from '@prisma/client';
+import { RolUsuario, EstadoUsuario } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { signToken } from '../middlewares/authMiddleware';
-
-const prisma = new PrismaClient();
+import { prisma } from '../prisma';
 
 export class AuthController {
   public static async registro(req: Request, res: Response): Promise<void> {

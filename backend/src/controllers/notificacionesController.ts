@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { ProgramacionService } from '../services/programacionService';
-
-const prisma = new PrismaClient();
 
 export interface EventoTurnoProximo {
   id: string;

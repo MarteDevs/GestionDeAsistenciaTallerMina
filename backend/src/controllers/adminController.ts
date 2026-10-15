@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient, EstadoUsuario, RolUsuario } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { EstadoUsuario, RolUsuario } from '@prisma/client';
+import { prisma } from '../prisma';
 
 export class AdminController {
   public static async listarUsuarios(req: Request, res: Response): Promise<void> {

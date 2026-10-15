@@ -39,7 +39,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onSelectFech
     try {
       setCargando(true);
       const res = await fetch(
-        `http://localhost:4000/api/notificaciones/proximos-turnos?fechaReferencia=${encodeURIComponent(
+        `/api/notificaciones/proximos-turnos?fechaReferencia=${encodeURIComponent(
           fechaReferencia
         )}&diasVentana=7`,
         {

@@ -1,6 +1,5 @@
-import { PrismaClient, TipoExcepcion } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { TipoExcepcion } from '@prisma/client';
+import { prisma } from '../prisma';
 
 export { TipoExcepcion };
 
