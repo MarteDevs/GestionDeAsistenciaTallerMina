@@ -11,7 +11,7 @@ import { authMiddleware, requireAdmin } from './middlewares/authMiddleware';
 dotenv.config();
 
 const app: Application = express();
-const PORT = Number(process.env.PORT) || 9000;
+const PORT = Number(process.env.PORT) || 9005;
 const HOST = process.env.HOST || '127.0.0.1';
 
 app.use(cors());
