@@ -3,6 +3,7 @@ package com.mars.asistenciamina.ui.screens.login
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.res.painterResource
+import com.mars.asistenciamina.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.Lock
@@ -97,21 +100,12 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Icono / Logo Taller Mina
-            Box(
-                modifier = Modifier
-                    .size(68.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Amber500),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Construction,
-                    contentDescription = "Taller Mina",
-                    tint = Slate950,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
+            // Logo Vectorial Oficial Taller Mina Asistencia
+            Image(
+                painter = painterResource(id = R.drawable.ic_logo_asistencia_mina),
+                contentDescription = "Logo Taller Mina Asistencia",
+                modifier = Modifier.size(86.dp)
+            )
 
             Spacer(modifier = Modifier.height(18.dp))
 

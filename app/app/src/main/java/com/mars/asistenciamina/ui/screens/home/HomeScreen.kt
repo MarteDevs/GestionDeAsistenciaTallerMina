@@ -3,11 +3,14 @@ package com.mars.asistenciamina.ui.screens.home
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.res.painterResource
+import com.mars.asistenciamina.R
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -107,20 +110,11 @@ fun HomeScreen(
                 ),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Amber500),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Construction,
-                                contentDescription = "Taller Mina",
-                                tint = Slate950,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_logo_asistencia_mina),
+                            contentDescription = "Logo Taller Mina",
+                            modifier = Modifier.size(36.dp)
+                        )
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(

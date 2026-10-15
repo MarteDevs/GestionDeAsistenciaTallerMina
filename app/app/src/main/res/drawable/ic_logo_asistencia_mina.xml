@@ -1,0 +1,114 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Escudo / Placa Base de Seguridad Industrial (Slate 950 con Borde Dorado) -->
+    <path
+        android:fillColor="#090D16"
+        android:strokeColor="#F59E0B"
+        android:strokeWidth="3.5"
+        android:strokeLineJoin="round"
+        android:pathData="M60,12 L98,26 C98,68 60,108 60,108 C60,108 22,68 22,26 Z" />
+
+    <!-- Sombra interior del escudo -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M60,18 L92,30 C92,66 60,101 60,101 C60,101 28,66 28,30 Z" />
+
+    <!-- Resplandor / Haz de luz de la lámpara minera -->
+    <path
+        android:fillColor="#33FBBF24"
+        android:pathData="M60,28 L38,10 L82,10 Z" />
+    <path
+        android:fillColor="#66FDE68A"
+        android:pathData="M60,28 L48,12 L72,12 Z" />
+
+    <!-- Tablilla / Hoja de Asistencia y Planilla de Turnos (Fondo) -->
+    <path
+        android:fillColor="#1E293B"
+        android:strokeColor="#475569"
+        android:strokeWidth="1.5"
+        android:pathData="M40,56 L80,56 C82.2,56 84,57.8 84,60 L84,92 C84,94.2 82.2,96 80,96 L40,96 C37.8,96 36,94.2 36,92 L36,60 C36,57.8 37.8,56 40,56 Z" />
+
+    <!-- Clip superior de la tablilla de asistencia -->
+    <path
+        android:fillColor="#64748B"
+        android:pathData="M52,53 L68,53 C69.1,53 70,53.9 70,55 L70,57 L50,57 L50,55 C50,53.9 50.9,53 52,53 Z" />
+
+    <!-- Líneas de planilla de turnos (Régimen 20x10) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#334155"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M44,65 L76,65" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#334155"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M44,73 L76,73" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#334155"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M44,81 L66,81" />
+
+    <!-- Casco Minero de Seguridad (Cuerpo Principal) -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M37,47 C37,33 46,24 60,24 C74,24 83,33 83,47 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M39,45 C39,34 47,26 60,26 C73,26 81,34 81,45 Z" />
+
+    <!-- Nervadura / Cresta central de impacto del casco -->
+    <path
+        android:fillColor="#FDE68A"
+        android:pathData="M58,24 L62,24 L62,45 L58,45 Z" />
+
+    <!-- Visera frontal protectora del casco -->
+    <path
+        android:fillColor="#B45309"
+        android:pathData="M32,46 C32,44.5 35,44 60,44 C85,44 88,44.5 88,46 C88,49 84,50 60,50 C36,50 32,49 32,46 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M34,46 C34,45 37,44.5 60,44.5 C83,44.5 86,45 86,46 C86,47.5 83,48.5 60,48.5 C37,48.5 34,47.5 34,46 Z" />
+
+    <!-- Lámpara Minera Frontal (Faro de Mina) -->
+    <!-- Base / Montura de la lámpara -->
+    <path
+        android:fillColor="#334155"
+        android:pathData="M56,33 L64,33 L65,39 L55,39 Z" />
+    <!-- Aro cromado de la lámpara -->
+    <path
+        android:fillColor="#E2E8F0"
+        android:pathData="M55,34 A5,5 0 1,0 65,34 A5,5 0 1,0 55,34 Z" />
+    <!-- Foco / Bombilla brillante encendida -->
+    <path
+        android:fillColor="#FEF08A"
+        android:pathData="M56.5,34 A3.5,3.5 0 1,0 63.5,34 A3.5,3.5 0 1,0 56.5,34 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M58,33 A1.5,1.5 0 1,0 61,33 A1.5,1.5 0 1,0 58,33 Z" />
+
+    <!-- Círculo Insignia de Validación de Asistencia (Sello Check) -->
+    <path
+        android:fillColor="#047857"
+        android:strokeColor="#10B981"
+        android:strokeWidth="2"
+        android:pathData="M60,78 A15,15 0 1,0 90,78 A15,15 0 1,0 60,78 Z" />
+
+    <!-- Checkmark de Asistencia Confirmada (Blanco con Sombra Esmeralda) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M68,78 L73,83 L83,72" />
+
+</vector>
