@@ -4,7 +4,7 @@ import { ProgramacionService } from '../services/programacionService';
 
 export interface EventoTurnoProximo {
   id: string;
-  tipo: 'INICIO_DESCANSO' | 'FIN_DESCANSO' | 'VENTA_ACTIVA' | 'PERMISO_ACTIVO';
+  tipo: 'EN_DESCANSO' | 'INICIO_DESCANSO' | 'FIN_DESCANSO' | 'VENTA_ACTIVA' | 'PERMISO_ACTIVA' | 'PERMISO_ACTIVO';
   trabajadorId: number;
   nombres: string;
   area: string;
@@ -77,15 +77,43 @@ export class NotificacionesController {
           });
         });
 
-        // Revisar cada descanso
+        // Revisar cada descanso programado de forma clara y sin duplicados
         for (const dp of t.descansosProgramados) {
           const fiStr = ProgramacionService.formatFechaIso(new Date(dp.fechaInicio));
           const ffStr = ProgramacionService.formatFechaIso(new Date(dp.fechaFin));
           const fiDate = new Date(dp.fechaInicio);
           const ffDate = new Date(dp.fechaFin);
 
-          // Evento A: Inicio de descanso (Salida de mina a descanso libre)
-          if (fiDate >= hoyUtc && fiDate <= limiteUtc) {
+          // CASO 1: El colaborador se encuentra ACTUALMENTE en descanso hoy
+          if (fiDate <= hoyUtc && ffDate >= hoyUtc) {
+            const diasParaFin = Math.round((ffDate.getTime() - hoyUtc.getTime()) / (1000 * 60 * 60 * 24));
+            const subidaDate = new Date(ffDate.getTime() + 24 * 60 * 60 * 1000);
+            const subidaStr = ProgramacionService.formatFechaIso(subidaDate);
+
+            eventos.push({
+              id: `descanso-activo-${t.id}-${fiStr}`,
+              tipo: 'EN_DESCANSO',
+              trabajadorId: t.id,
+              nombres: t.nombres,
+              area: t.area,
+              fechaEvento: ffStr,
+              diasRestantes: diasParaFin,
+              descripcion: diasParaFin === 0
+                ? `${t.nombres} culmina hoy su descanso. Retorna al taller mañana (${subidaStr}).`
+                : diasParaFin === 1
+                ? `${t.nombres} está en descanso (último día). Retorna al taller el ${subidaStr}.`
+                : `${t.nombres} se encuentra en descanso (le quedan ${diasParaFin} días). Retorna al taller el ${subidaStr}.`,
+              detalle: {
+                fechaInicio: fiStr,
+                fechaFin: ffStr,
+                cantidadDias: dp.cantidadDias,
+              },
+            });
+            continue; // Evita generar un segundo evento redundante para el mismo descanso
+          }
+
+          // CASO 2: El colaborador está en mina y su descanso INICIA en los próximos días de la ventana
+          if (fiDate > hoyUtc && fiDate <= limiteUtc) {
             const diffDias = Math.round((fiDate.getTime() - hoyUtc.getTime()) / (1000 * 60 * 60 * 24));
             eventos.push({
               id: `descanso-inicio-${t.id}-${fiStr}`,
@@ -95,56 +123,9 @@ export class NotificacionesController {
               area: t.area,
               fechaEvento: fiStr,
               diasRestantes: diffDias,
-              descripcion: diffDias === 0
-                ? `${t.nombres} inicia hoy su descanso programado (${dp.cantidadDias} días).`
-                : `${t.nombres} inicia descanso en ${diffDias} ${diffDias === 1 ? 'día' : 'días'} (${fiStr}).`,
-              detalle: {
-                fechaInicio: fiStr,
-                fechaFin: ffStr,
-                cantidadDias: dp.cantidadDias,
-              },
-            });
-          }
-
-          // Evento B: Fin de descanso (Reincorporación / Subida a mina al día siguiente del fin)
-          if (ffDate >= hoyUtc && ffDate <= limiteUtc) {
-            const diffDias = Math.round((ffDate.getTime() - hoyUtc.getTime()) / (1000 * 60 * 60 * 24));
-            const subidaDate = new Date(ffDate.getTime() + 24 * 60 * 60 * 1000);
-            const subidaStr = ProgramacionService.formatFechaIso(subidaDate);
-
-            eventos.push({
-              id: `descanso-fin-${t.id}-${ffStr}`,
-              tipo: 'FIN_DESCANSO',
-              trabajadorId: t.id,
-              nombres: t.nombres,
-              area: t.area,
-              fechaEvento: ffStr,
-              diasRestantes: diffDias,
-              descripcion: diffDias === 0
-                ? `${t.nombres} termina hoy su descanso. Reincorporación mañana ${subidaStr}.`
-                : `${t.nombres} termina descanso en ${diffDias} ${diffDias === 1 ? 'día' : 'días'}. Reincorporación el ${subidaStr}.`,
-              detalle: {
-                fechaInicio: fiStr,
-                fechaFin: ffStr,
-                cantidadDias: dp.cantidadDias,
-              },
-            });
-          }
-
-          // Evento A2: Descanso en curso hoy (iniciado antes de hoy y vigente hoy)
-          if (fiDate < hoyUtc && ffDate >= hoyUtc) {
-            const diasParaFin = Math.round((ffDate.getTime() - hoyUtc.getTime()) / (1000 * 60 * 60 * 24));
-            eventos.push({
-              id: `descanso-curso-${t.id}-${fiStr}`,
-              tipo: 'INICIO_DESCANSO',
-              trabajadorId: t.id,
-              nombres: t.nombres,
-              area: t.area,
-              fechaEvento: fechaHoyStr,
-              diasRestantes: 0,
-              descripcion: diasParaFin === 0
-                ? `${t.nombres} culmina hoy su período de descanso programado.`
-                : `${t.nombres} se encuentra actualmente en descanso programado (quedan ${diasParaFin} días, hasta ${ffStr}).`,
+              descripcion: diffDias === 1
+                ? `${t.nombres} culmina guardia en mina y baja a descanso mañana (${fiStr}).`
+                : `${t.nombres} culmina guardia y baja a descanso en ${diffDias} días (${fiStr}).`,
               detalle: {
                 fechaInicio: fiStr,
                 fechaFin: ffStr,
@@ -154,7 +135,7 @@ export class NotificacionesController {
           }
         }
 
-        // Evento C: Excepciones activas o próximas (Ventas de descanso o Permisos)
+        // CASO 3: Excepciones activas o próximas (Ventas de descanso o Permisos)
         for (const exc of t.excepciones) {
           const excFechaStr = ProgramacionService.formatFechaIso(new Date(exc.fecha));
           const excDate = new Date(exc.fecha);
@@ -198,8 +179,8 @@ export class NotificacionesController {
         }
       }
 
-      // Ordenar cronológicamente por días restantes y fecha
-      eventos.sort((a, b) => a.diasRestantes - b.diasRestantes);
+      // Ordenar cronológicamente por días restantes y nombre
+      eventos.sort((a, b) => a.diasRestantes - b.diasRestantes || a.nombres.localeCompare(b.nombres));
 
       // Estadísticas rápidas para badges
       const estadisticas = {
@@ -207,7 +188,7 @@ export class NotificacionesController {
         hoy: eventos.filter((e) => e.diasRestantes === 0).length,
         proximos3Dias: eventos.filter((e) => e.diasRestantes > 0 && e.diasRestantes <= 3).length,
         iniciosDescanso: eventos.filter((e) => e.tipo === 'INICIO_DESCANSO').length,
-        finesDescanso: eventos.filter((e) => e.tipo === 'FIN_DESCANSO').length,
+        finesDescanso: eventos.filter((e) => e.tipo === 'EN_DESCANSO').length,
         ventas: eventos.filter((e) => e.tipo === 'VENTA_ACTIVA').length,
       };
 

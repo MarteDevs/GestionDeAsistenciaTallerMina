@@ -52,15 +52,24 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mars.asistenciamina.data.models.TrabajadorDto
 import com.mars.asistenciamina.ui.components.SkeletonItem
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Construction
+import com.mars.asistenciamina.data.models.DescansoDto
 import com.mars.asistenciamina.ui.theme.Amber400
 import com.mars.asistenciamina.ui.theme.Amber500
 import com.mars.asistenciamina.ui.theme.Cyan500
 import com.mars.asistenciamina.ui.theme.Emerald500
+import com.mars.asistenciamina.ui.theme.Violet500
 import com.mars.asistenciamina.ui.theme.Slate200
 import com.mars.asistenciamina.ui.theme.Slate400
+import com.mars.asistenciamina.ui.theme.Slate600
 import com.mars.asistenciamina.ui.theme.Slate800
 import com.mars.asistenciamina.ui.theme.Slate900
 import com.mars.asistenciamina.ui.theme.Slate950
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -185,11 +194,104 @@ fun TrabajadoresScreen(
     }
 }
 
+data class EstadoOperativoTrabajador(
+    val enDescanso: Boolean,
+    val etiquetaEstado: String,
+    val detalleFechas: String,
+    val colorEstado: Color
+)
+
+fun obtenerEstadoOperativo(descansos: List<DescansoDto>): EstadoOperativoTrabajador {
+    if (descansos.isEmpty()) {
+        return EstadoOperativoTrabajador(
+            enDescanso = false,
+            etiquetaEstado = "En Guardia Mina",
+            detalleFechas = "Sin descansos programados",
+            colorEstado = Emerald500
+        )
+    }
+
+    val hoy = LocalDate.now()
+    val fmt = DateTimeFormatter.ofPattern("dd MMM")
+
+    // 1. ¿Está actualmente en descanso hoy?
+    val descansoActivo = descansos.firstOrNull { d ->
+        try {
+            val ini = LocalDate.parse(d.fechaInicio.take(10))
+            val fin = LocalDate.parse(d.fechaFin.take(10))
+            !hoy.isBefore(ini) && !hoy.isAfter(fin)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    if (descansoActivo != null) {
+        return try {
+            val fin = LocalDate.parse(descansoActivo.fechaFin.take(10))
+            val diasRestantes = ChronoUnit.DAYS.between(hoy, fin).toInt()
+            val reincorporacion = fin.plusDays(1)
+            val diasTexto = if (diasRestantes <= 0) "¡Culmina hoy!" else "Quedan ${diasRestantes}d"
+
+            EstadoOperativoTrabajador(
+                enDescanso = true,
+                etiquetaEstado = "🛌 En Descanso ($diasTexto)",
+                detalleFechas = "Retorna a taller: ${reincorporacion.format(fmt)}",
+                colorEstado = Violet500
+            )
+        } catch (e: Exception) {
+            EstadoOperativoTrabajador(
+                enDescanso = true,
+                etiquetaEstado = "🛌 En Descanso",
+                detalleFechas = "Periodo activo",
+                colorEstado = Violet500
+            )
+        }
+    }
+
+    // 2. Si no está en descanso hoy, buscar la próxima bajada a descanso
+    val proximoDescanso = descansos
+        .mapNotNull { d ->
+            try {
+                val ini = LocalDate.parse(d.fechaInicio.take(10))
+                val fin = LocalDate.parse(d.fechaFin.take(10))
+                if (ini.isAfter(hoy)) Triple(d, ini, fin) else null
+            } catch (e: Exception) {
+                null
+            }
+        }
+        .minByOrNull { it.second }
+
+    if (proximoDescanso != null) {
+        val (d, ini, fin) = proximoDescanso
+        val diasParaBajar = ChronoUnit.DAYS.between(hoy, ini).toInt()
+        val rangoStr = "${ini.format(fmt)} - ${fin.format(fmt)}"
+        val textoBaja = if (diasParaBajar <= 0) "¡Baja Hoy!" else if (diasParaBajar == 1) "Baja mañana" else "Baja en ${diasParaBajar}d"
+
+        return EstadoOperativoTrabajador(
+            enDescanso = false,
+            etiquetaEstado = "🔨 En Mina ($textoBaja)",
+            detalleFechas = "Próx. descanso: $rangoStr",
+            colorEstado = Amber400
+        )
+    }
+
+    return EstadoOperativoTrabajador(
+        enDescanso = false,
+        etiquetaEstado = "🔨 En Guardia Mina",
+        detalleFechas = "Ciclo 20x10 cumplido",
+        colorEstado = Emerald500
+    )
+}
+
 @Composable
 fun CardTrabajadorItem(
     trabajador: TrabajadorDto,
     onClick: () -> Unit
 ) {
+    val estado = remember(trabajador.id, trabajador.descansos) {
+        obtenerEstadoOperativo(trabajador.descansos)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -204,65 +306,103 @@ fun CardTrabajadorItem(
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Inicial Avatar
+            // Inicial Avatar con color acorde al estado
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Amber500.copy(alpha = 0.2f)),
+                    .background(estado.colorEstado.copy(alpha = 0.18f))
+                    .border(1.dp, estado.colorEstado.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = trabajador.nombres.take(1).uppercase(),
-                    color = Amber400,
+                    color = estado.colorEstado,
                     fontWeight = FontWeight.Black,
-                    fontSize = 16.sp
+                    fontSize = 17.sp
                 )
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = trabajador.nombres,
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
+                // Nombre y Badge de estado operativo
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Text(
+                        text = trabajador.nombres,
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Emerald500.copy(alpha = 0.15f))
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(estado.colorEstado.copy(alpha = 0.15f))
+                            .border(1.dp, estado.colorEstado.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "CICLO 20x10",
-                            color = Emerald500,
+                            text = estado.etiquetaEstado,
+                            color = estado.colorEstado,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
+                }
+
+                Spacer(modifier = Modifier.height(3.dp))
+
+                // Detalle operativo de fechas
+                Text(
+                    text = estado.detalleFechas,
+                    color = Slate200,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Normal
+                )
+
+                Spacer(modifier = Modifier.height(3.dp))
+
+                // Fila inferior: Área y total de periodos
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = trabajador.area.ifBlank { "Taller Principal" },
+                        color = Slate400,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
 
                     Text(
-                        text = "${trabajador.descansos.size} Periodos Programados",
+                        text = "•",
+                        color = Slate600,
+                        fontSize = 10.sp
+                    )
+
+                    Text(
+                        text = "${trabajador.descansos.size} periodos 2026",
                         color = Slate400,
                         fontSize = 10.sp
                     )
                 }
             }
 
+            Spacer(modifier = Modifier.width(6.dp))
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
                 tint = Slate800,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
     }

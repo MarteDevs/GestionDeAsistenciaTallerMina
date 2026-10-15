@@ -64,14 +64,17 @@ import com.mars.asistenciamina.ui.theme.Amber500
 import com.mars.asistenciamina.ui.theme.Cyan500
 import com.mars.asistenciamina.ui.theme.Emerald500
 import com.mars.asistenciamina.ui.theme.Rose500
+import com.mars.asistenciamina.ui.theme.Violet500
 import com.mars.asistenciamina.ui.theme.Slate200
 import com.mars.asistenciamina.ui.theme.Slate400
 import com.mars.asistenciamina.ui.theme.Slate700
 import com.mars.asistenciamina.ui.theme.Slate800
 import com.mars.asistenciamina.ui.theme.Slate900
 import com.mars.asistenciamina.ui.theme.Slate950
+import androidx.compose.foundation.border
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -243,6 +246,19 @@ fun DetalleTrabajadorScreen(
 
             items(trabajador.descansos) { descanso ->
                 val esSeleccionado = selectedDescanso?.id == descanso.id
+                val hoy = remember { LocalDate.now() }
+                val (esActivoHoy, rangoTexto) = remember(descanso.id) {
+                    try {
+                        val ini = LocalDate.parse(descanso.fechaInicio.take(10))
+                        val fin = LocalDate.parse(descanso.fechaFin.take(10))
+                        val activo = !hoy.isBefore(ini) && !hoy.isAfter(fin)
+                        val fmt = DateTimeFormatter.ofPattern("dd MMM")
+                        val str = "${ini.format(fmt)} al ${fin.format(fmt)} (${fin.year})"
+                        Pair(activo, str)
+                    } catch (e: Exception) {
+                        Pair(false, "${descanso.fechaInicio.take(10)} al ${descanso.fechaFin.take(10)}")
+                    }
+                }
 
                 Card(
                     modifier = Modifier
@@ -254,7 +270,8 @@ fun DetalleTrabajadorScreen(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (esSeleccionado) Slate800 else Slate900
-                    )
+                    ),
+                    border = if (esSeleccionado) androidx.compose.foundation.BorderStroke(1.dp, Amber500) else null
                 ) {
                     Row(
                         modifier = Modifier
@@ -266,9 +283,9 @@ fun DetalleTrabajadorScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(34.dp)
+                                    .size(36.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (esSeleccionado) Amber500 else Slate700),
+                                    .background(if (esSeleccionado) Amber500 else if (esActivoHoy) Violet500 else Slate700),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -280,14 +297,33 @@ fun DetalleTrabajadorScreen(
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = rangoTexto,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    if (esActivoHoy) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(Violet500.copy(alpha = 0.2f))
+                                                .border(1.dp, Violet500.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                                        ) {
+                                            Text(
+                                                text = "EN CURSO",
+                                                color = Violet500,
+                                                fontSize = 8.sp,
+                                                fontWeight = FontWeight.Black
+                                            )
+                                        }
+                                    }
+                                }
                                 Text(
-                                    text = "${descanso.fechaInicio.take(10)} al ${descanso.fechaFin.take(10)}",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "${descanso.diasTotales} días libres programados",
+                                    text = "${descanso.diasTotales} días libres de descanso",
                                     fontSize = 10.sp,
                                     color = Slate400
                                 )

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.res.painterResource
 import com.mars.asistenciamina.R
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,16 +22,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -66,8 +71,10 @@ import com.mars.asistenciamina.ui.theme.Amber500
 import com.mars.asistenciamina.ui.theme.Cyan500
 import com.mars.asistenciamina.ui.theme.Emerald500
 import com.mars.asistenciamina.ui.theme.Rose500
+import com.mars.asistenciamina.ui.theme.Violet500
 import com.mars.asistenciamina.ui.theme.Slate200
 import com.mars.asistenciamina.ui.theme.Slate400
+import com.mars.asistenciamina.ui.theme.Slate600
 import com.mars.asistenciamina.ui.theme.Slate800
 import com.mars.asistenciamina.ui.theme.Slate900
 import androidx.compose.runtime.mutableStateOf
@@ -217,6 +224,22 @@ fun HomeScreen(
             }
 
             is HomeUiState.Success -> {
+                var selectedTab by rememberSaveable { mutableStateOf("TODOS") }
+
+                val totalCount = uiState.eventos.size
+                val descansoCount = uiState.eventos.count { it.tipo == "EN_DESCANSO" || it.tipo == "FIN_DESCANSO" }
+                val porBajarCount = uiState.eventos.count { it.tipo == "INICIO_DESCANSO" }
+                val ventasCount = uiState.eventos.count { it.tipo == "VENTA_ACTIVA" || it.tipo == "PERMISO_ACTIVO" }
+
+                val eventosFiltrados = remember(selectedTab, uiState.eventos) {
+                    when (selectedTab) {
+                        "EN_DESCANSO" -> uiState.eventos.filter { it.tipo == "EN_DESCANSO" || it.tipo == "FIN_DESCANSO" }
+                        "POR_BAJAR" -> uiState.eventos.filter { it.tipo == "INICIO_DESCANSO" }
+                        "VENTAS" -> uiState.eventos.filter { it.tipo == "VENTA_ACTIVA" || it.tipo == "PERMISO_ACTIVO" }
+                        else -> uiState.eventos
+                    }
+                }
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -269,27 +292,27 @@ fun HomeScreen(
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                // Grid de 3 Métricas
+                                // Grid de 3 Métricas Operativas
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     MetricaBadge(
-                                        titulo = "Inician DL",
-                                        valor = uiState.resumen.inicianDescansoProximos.toString(),
-                                        color = Emerald500,
+                                        titulo = "En Descanso",
+                                        valor = descansoCount.toString(),
+                                        color = Violet500,
                                         modifier = Modifier.weight(1f)
                                     )
                                     MetricaBadge(
-                                        titulo = "Retornan",
-                                        valor = uiState.resumen.retornanTrabajoProximos.toString(),
-                                        color = Cyan500,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    MetricaBadge(
-                                        titulo = "VD / Perm.",
-                                        valor = uiState.resumen.ventasOPermisosActivos.toString(),
+                                        titulo = "Por Bajar",
+                                        valor = porBajarCount.toString(),
                                         color = Amber400,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    MetricaBadge(
+                                        titulo = "Ventas / VD",
+                                        valor = ventasCount.toString(),
+                                        color = Emerald500,
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
@@ -297,28 +320,153 @@ fun HomeScreen(
                         }
                     }
 
-                    // Título de la lista
+                    // Segmented Tabs / Filtros Rápidos
+                    item {
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            item {
+                                FiltroChip(
+                                    texto = "Todos",
+                                    conteo = totalCount,
+                                    seleccionado = selectedTab == "TODOS",
+                                    colorActivo = Amber500,
+                                    onClick = { selectedTab = "TODOS" }
+                                )
+                            }
+                            item {
+                                FiltroChip(
+                                    texto = "🛌 En Descanso",
+                                    conteo = descansoCount,
+                                    seleccionado = selectedTab == "EN_DESCANSO",
+                                    colorActivo = Violet500,
+                                    onClick = { selectedTab = "EN_DESCANSO" }
+                                )
+                            }
+                            item {
+                                FiltroChip(
+                                    texto = "⬇️ Por Bajar",
+                                    conteo = porBajarCount,
+                                    seleccionado = selectedTab == "POR_BAJAR",
+                                    colorActivo = Amber400,
+                                    onClick = { selectedTab = "POR_BAJAR" }
+                                )
+                            }
+                            item {
+                                FiltroChip(
+                                    texto = "💼 Ventas (VD)",
+                                    conteo = ventasCount,
+                                    seleccionado = selectedTab == "VENTAS",
+                                    colorActivo = Emerald500,
+                                    onClick = { selectedTab = "VENTAS" }
+                                )
+                            }
+                        }
+                    }
+
+                    // Título de la sección
                     item {
                         Text(
-                            text = "CAMBIOS DE GUARDIA PROGRAMADOS",
+                            text = when (selectedTab) {
+                                "EN_DESCANSO" -> "PERSONAL EN DESCANSO PROGRAMADO (${eventosFiltrados.size})"
+                                "POR_BAJAR" -> "PRÓXIMAS SALIDAS A DESCANSO (${eventosFiltrados.size})"
+                                "VENTAS" -> "VENTAS DE DESCANSO ACTIVAS (${eventosFiltrados.size})"
+                                else -> "TODOS LOS RELEVOS EN VENTANA (${eventosFiltrados.size})"
+                            },
                             color = Slate400,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                         )
                     }
 
-                    // Lista de Eventos con Animación
-                    items(uiState.eventos) { evento ->
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn() + slideInVertically()
-                        ) {
-                            EventoItemCard(evento = evento)
+                    if (eventosFiltrados.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 30.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        imageVector = Icons.Default.DirectionsRun,
+                                        contentDescription = null,
+                                        tint = Slate600,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "No hay registros en esta categoría",
+                                        color = Slate400,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        // Lista de Eventos Filtrados
+                        items(eventosFiltrados, key = { it.id }) { evento ->
+                            AnimatedVisibility(
+                                visible = true,
+                                enter = fadeIn() + slideInVertically()
+                            ) {
+                                EventoItemCard(evento = evento)
+                            }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun FiltroChip(
+    texto: String,
+    conteo: Int,
+    seleccionado: Boolean,
+    colorActivo: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (seleccionado) colorActivo.copy(alpha = 0.2f) else Slate900)
+            .border(
+                width = 1.dp,
+                color = if (seleccionado) colorActivo else Slate800,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = texto,
+                color = if (seleccionado) colorActivo else Slate400,
+                fontSize = 12.sp,
+                fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (seleccionado) colorActivo else Slate800)
+                    .padding(horizontal = 6.dp, vertical = 1.dp)
+            ) {
+                Text(
+                    text = conteo.toString(),
+                    color = if (seleccionado) Slate950 else Slate400,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black
+                )
             }
         }
     }
@@ -348,15 +496,29 @@ fun MetricaBadge(
 
 @Composable
 fun EventoItemCard(evento: EventoNotificacionDto) {
-    val esSalida = evento.tipo == "INICIO_DESCANSO"
-    val esRetorno = evento.tipo == "FIN_DESCANSO"
-    val esVD = evento.tipo == "VENTA_ACTIVA"
+    val esEnDescanso = evento.tipo == "EN_DESCANSO" || evento.tipo == "FIN_DESCANSO"
+    val esPorBajar = evento.tipo == "INICIO_DESCANSO"
+    val esVenta = evento.tipo == "VENTA_ACTIVA"
 
     val badgeColor = when {
-        esSalida -> Emerald500
-        esRetorno -> Cyan500
-        esVD -> Amber400
+        esEnDescanso -> Violet500
+        esPorBajar -> Amber400
+        esVenta -> Emerald500
         else -> Rose500
+    }
+
+    val badgeLabel = when {
+        esEnDescanso -> "🛌 En Descanso"
+        esPorBajar -> "⬇️ Por Bajar"
+        esVenta -> "💼 Venta Activa"
+        else -> "📋 Permiso"
+    }
+
+    val iconVector = when {
+        esEnDescanso -> Icons.Default.Bedtime
+        esPorBajar -> Icons.Default.FlightTakeoff
+        esVenta -> Icons.Default.Paid
+        else -> Icons.Default.Assignment
     }
 
     Card(
@@ -374,22 +536,23 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(badgeColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (esSalida) Icons.Default.FlightTakeoff else Icons.Default.DirectionsRun,
+                    imageVector = iconVector,
                     contentDescription = null,
                     tint = badgeColor,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
+                // Fila 1: Nombre y Badge de Estado
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -400,8 +563,66 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                         color = Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(badgeColor.copy(alpha = 0.18f))
+                            .border(1.dp, badgeColor.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = badgeLabel,
+                            color = badgeColor,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(3.dp))
+
+                // Fila 2: Descripción amigable y clara
+                Text(
+                    text = evento.descripcion,
+                    color = Slate200,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Normal,
+                    lineHeight = 15.sp
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Fila 3: Fecha clave y Contador de días
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = Slate400,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = when {
+                                esEnDescanso -> "Fin de descanso: ${evento.fecha}"
+                                esPorBajar -> "Inicia descanso: ${evento.fecha}"
+                                esVenta -> "Labora hasta: ${evento.fecha}"
+                                else -> evento.fecha
+                            },
+                            color = Slate400,
+                            fontSize = 10.sp
+                        )
+                    }
 
                     Box(
                         modifier = Modifier
@@ -413,39 +634,21 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = if (evento.esHoy) "¡HOY!" else "en ${evento.diasRestantes}d",
+                            text = when {
+                                evento.esHoy -> "¡HOY!"
+                                esEnDescanso -> "Quedan ${evento.diasRestantes}d"
+                                esPorBajar -> "Baja en ${evento.diasRestantes}d"
+                                else -> "en ${evento.diasRestantes}d"
+                            },
                             color = if (evento.esHoy) Rose500 else Slate400,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = evento.descripcion,
-                    color = Slate200,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Normal
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarMonth,
-                        contentDescription = null,
-                        tint = Slate400,
-                        modifier = Modifier.size(11.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = evento.fecha,
-                        color = Slate400,
-                        fontSize = 10.sp
-                    )
-                }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(6.dp))
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,

@@ -16,7 +16,7 @@ import {
 
 interface EventoTurno {
   id: string;
-  tipo: 'INICIO_DESCANSO' | 'FIN_DESCANSO' | 'VENTA_ACTIVA' | 'PERMISO_ACTIVO';
+  tipo: 'INICIO_DESCANSO' | 'FIN_DESCANSO' | 'EN_DESCANSO' | 'VENTA_ACTIVA' | 'PERMISO_ACTIVO';
   trabajadorId: number;
   nombres: string;
   area: string;
@@ -125,7 +125,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
     (e) => e.tipo === 'INICIO_DESCANSO'
   );
   const proximosRetornoMina = eventosFiltrados.filter(
-    (e) => e.tipo === 'FIN_DESCANSO'
+    (e) => e.tipo === 'FIN_DESCANSO' || e.tipo === 'EN_DESCANSO'
   );
   const ventasActivas = eventosFiltrados.filter(
     (e) => e.tipo === 'VENTA_ACTIVA'
