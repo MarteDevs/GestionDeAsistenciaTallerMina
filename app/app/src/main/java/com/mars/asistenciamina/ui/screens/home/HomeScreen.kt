@@ -42,7 +42,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +50,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import java.time.LocalDate
+import java.util.Locale
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -75,8 +77,10 @@ import com.mars.asistenciamina.ui.theme.Emerald500
 import com.mars.asistenciamina.ui.theme.Rose500
 import com.mars.asistenciamina.ui.theme.Violet500
 import com.mars.asistenciamina.ui.theme.Slate200
+import com.mars.asistenciamina.ui.theme.Slate300
 import com.mars.asistenciamina.ui.theme.Slate400
 import com.mars.asistenciamina.ui.theme.Slate600
+import com.mars.asistenciamina.ui.theme.Slate700
 import com.mars.asistenciamina.ui.theme.Slate800
 import com.mars.asistenciamina.ui.theme.Slate900
 import androidx.compose.runtime.mutableStateOf
@@ -112,59 +116,104 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Slate950,
                     titleContentColor = Color.White
                 ),
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_logo_asistencia_mina),
-                            contentDescription = "Logo Taller Mina",
-                            modifier = Modifier.size(36.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Slate900)
+                                .border(1.dp, Slate800, RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_logo_asistencia_mina),
+                                contentDescription = "Logo Taller Mina",
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
                                 text = "TALLER MINA",
-                                fontSize = 16.sp,
+                                fontSize = 17.sp,
                                 fontWeight = FontWeight.Black,
-                                letterSpacing = 0.5.sp
+                                letterSpacing = 0.6.sp,
+                                color = Color.White
                             )
                             Text(
                                 text = if (usuarioActual != null) "Hola, ${usuarioActual.nombres.split(" ").firstOrNull() ?: usuarioActual.nombres}" else "Operación 20x10 Mina",
-                                fontSize = 11.5.sp,
-                                color = Slate400
+                                fontSize = 12.sp,
+                                color = Slate400,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        if (state is HomeUiState.Success) {
-                            val eventos = (state as HomeUiState.Success).eventos
-                            NotificationHelper.notifyUpcomingShifts(context, eventos)
+                    IconButton(
+                        onClick = {
+                            if (state is HomeUiState.Success) {
+                                val eventos = (state as HomeUiState.Success).eventos
+                                NotificationHelper.notifyUpcomingShifts(context, eventos)
+                            }
+                        },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.TopEnd) {
+                            Icon(
+                                imageVector = Icons.Default.NotificationsActive,
+                                contentDescription = "Enviar Notificación Push",
+                                tint = Amber400,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            val totalAlertas = (state as? HomeUiState.Success)?.resumen?.total ?: 0
+                            if (totalAlertas > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clip(CircleShape)
+                                        .background(Rose500),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (totalAlertas > 9) "9+" else totalAlertas.toString(),
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
+                            }
                         }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.NotificationsActive,
-                            contentDescription = "Enviar Notificación Push",
-                            tint = Amber400
-                        )
                     }
-                    IconButton(onClick = { viewModel.cargarTurnos(null) }) {
+                    IconButton(
+                        onClick = { viewModel.cargarTurnos(null) },
+                        modifier = Modifier.size(44.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Actualizar",
-                            tint = Color.White
+                            tint = Slate200,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
-                    IconButton(onClick = onLogout) {
+                    IconButton(
+                        onClick = onLogout,
+                        modifier = Modifier.size(44.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Logout,
                             contentDescription = "Cerrar Sesión",
-                            tint = Rose500
+                            tint = Rose500,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
@@ -510,6 +559,43 @@ fun MetricaBadge(
     }
 }
 
+fun limpiarDescripcion(descripcion: String, trabajadorNombre: String): String {
+    var limpia = descripcion
+        .replace(Regex("""\s*\(\d{4}-\d{2}-\d{2}\)"""), "")
+        .replace(Regex("""\s*\(\d{2}/\d{2}/\d{4}\)"""), "")
+        .trim()
+
+    if (trabajadorNombre.isNotBlank() && limpia.startsWith(trabajadorNombre, ignoreCase = true)) {
+        limpia = limpia.substring(trabajadorNombre.length).trimStart()
+        if (limpia.startsWith("se encuentra", ignoreCase = true)) {
+            limpia = "Se encuentra" + limpia.substring(12)
+        } else if (limpia.startsWith("culmina", ignoreCase = true)) {
+            limpia = "Culmina" + limpia.substring(7)
+        } else if (limpia.startsWith("está", ignoreCase = true)) {
+            limpia = "Está" + limpia.substring(4)
+        } else if (limpia.startsWith("tiene", ignoreCase = true)) {
+            limpia = "Tiene" + limpia.substring(5)
+        } else if (limpia.isNotEmpty()) {
+            limpia = limpia.replaceFirstChar { it.uppercase() }
+        }
+    }
+    return limpia
+}
+
+fun formatearFechaEspanol(fechaIso: String): String {
+    return try {
+        val iso = fechaIso.take(10)
+        val d = LocalDate.parse(iso)
+        val diaSem = d.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, Locale("es", "PE"))
+            .replaceFirstChar { it.uppercase() }
+        val mes = d.month.getDisplayName(java.time.format.TextStyle.FULL, Locale("es", "PE"))
+            .replaceFirstChar { it.uppercase() }
+        "$diaSem, ${d.dayOfMonth} de $mes de ${d.year}"
+    } catch (e: Exception) {
+        fechaIso
+    }
+}
+
 @Composable
 fun EventoItemCard(evento: EventoNotificacionDto) {
     val esEnDescanso = evento.tipo == "EN_DESCANSO" || evento.tipo == "FIN_DESCANSO"
@@ -527,7 +613,7 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
         esEnDescanso -> "En Descanso"
         esPorBajar -> "Por Bajar"
         esVenta -> "Venta Activa"
-        else -> "Permiso"
+        else -> "Permiso Especial"
     }
 
     val iconVector = when {
@@ -537,150 +623,204 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
         else -> Icons.Default.Assignment
     }
 
+    val fechaLegible = remember(evento.fecha) {
+        formatearFechaEspanol(evento.fecha)
+    }
+
+    val descLimpia = remember(evento.descripcion, evento.trabajadorNombre) {
+        limpiarDescripcion(evento.descripcion, evento.trabajadorNombre)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 7.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Slate900)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Slate900),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Slate800)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(20.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(badgeColor.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
+            // Fila Superior 1: Badges de Estado y Contador de Días en extremos limpios
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = iconVector,
-                    contentDescription = null,
-                    tint = badgeColor,
-                    modifier = Modifier.size(24.dp)
-                )
+                // Badge de Estado Operativo
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(badgeColor.copy(alpha = 0.16f))
+                        .border(1.dp, badgeColor.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = iconVector,
+                            contentDescription = null,
+                            tint = badgeColor,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = badgeLabel.uppercase(),
+                            color = badgeColor,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+
+                // Badge Contador de Días
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (evento.esHoy) Rose500.copy(alpha = 0.2f)
+                            else Slate800
+                        )
+                        .border(
+                            1.dp,
+                            if (evento.esHoy) Rose500.copy(alpha = 0.6f) else Slate700,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Text(
+                        text = when {
+                            evento.esHoy -> "¡HOY!"
+                            esEnDescanso -> "Quedan ${evento.diasRestantes} días"
+                            esPorBajar -> "Baja en ${evento.diasRestantes} ${if (evento.diasRestantes == 1) "día" else "días"}"
+                            else -> "En ${evento.diasRestantes} días"
+                        },
+                        color = if (evento.esHoy) Rose500 else Slate300,
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                // Fila 1: Nombre y Badge de Estado
+            // Fila 2: Avatar Grande (52dp) + Nombre Completo (sin recortes) + Área + Descripción
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(badgeColor.copy(alpha = 0.15f))
+                        .border(1.dp, badgeColor.copy(alpha = 0.35f), RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = iconVector,
+                        contentDescription = null,
+                        tint = badgeColor,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    // Nombre Completo: Fuente grande, FontWeight.Black, hasta 2 líneas para NUNCA truncar
+                    Text(
+                        text = evento.trabajadorNombre,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        lineHeight = 22.sp,
+                        maxLines = 2
+                    )
+
+                    if (evento.area.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = evento.area,
+                            color = Slate400,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    if (descLimpia.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = descLimpia,
+                            color = Slate300,
+                            fontSize = 12.5.sp,
+                            lineHeight = 17.5.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Fila 3: Contenedor elegante de Fecha Formateada en Español
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Slate950)
+                    .border(1.dp, Slate800, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = evento.trabajadorNombre,
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(7.dp))
-                            .background(badgeColor.copy(alpha = 0.18f))
-                            .border(1.dp, badgeColor.copy(alpha = 0.4f), RoundedCornerShape(7.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = iconVector,
-                                contentDescription = null,
-                                tint = badgeColor,
-                                modifier = Modifier.size(11.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = Amber400,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            val accionFecha = when {
+                                esEnDescanso -> "Fin de descanso / Retorno a mina"
+                                esPorBajar -> "Inicia descanso programado"
+                                esVenta -> "Labora en taller hasta"
+                                else -> "Fecha de programación"
+                            }
                             Text(
-                                text = badgeLabel,
-                                color = badgeColor,
-                                fontSize = 10.5.sp,
+                                text = accionFecha,
+                                color = Slate400,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = fechaLegible,
+                                color = Color.White,
+                                fontSize = 13.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(5.dp))
-
-                // Fila 2: Descripción amigable y clara
-                Text(
-                    text = evento.descripcion,
-                    color = Slate200,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Normal,
-                    lineHeight = 17.sp
-                )
-
-                Spacer(modifier = Modifier.height(7.dp))
-
-                // Fila 3: Fecha clave y Contador de días
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = null,
-                            tint = Slate400,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(
-                            text = when {
-                                esEnDescanso -> "Fin de descanso: ${evento.fecha}"
-                                esPorBajar -> "Inicia descanso: ${evento.fecha}"
-                                esVenta -> "Labora hasta: ${evento.fecha}"
-                                else -> evento.fecha
-                            },
-                            color = Slate400,
-                            fontSize = 11.5.sp
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(7.dp))
-                            .background(
-                                if (evento.esHoy) Rose500.copy(alpha = 0.2f)
-                                else Slate800
-                            )
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = when {
-                                evento.esHoy -> "¡HOY!"
-                                esEnDescanso -> "Quedan ${evento.diasRestantes}d"
-                                esPorBajar -> "Baja en ${evento.diasRestantes}d"
-                                else -> "en ${evento.diasRestantes}d"
-                            },
-                            color = if (evento.esHoy) Rose500 else Slate400,
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = Slate600,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Slate600,
-                modifier = Modifier.size(18.dp)
-            )
         }
     }
 }

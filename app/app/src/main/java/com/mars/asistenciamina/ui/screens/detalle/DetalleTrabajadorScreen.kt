@@ -29,7 +29,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -76,6 +77,7 @@ import androidx.compose.foundation.border
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -90,7 +92,43 @@ fun DetalleTrabajadorScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var selectedDescanso by remember { mutableStateOf<DescansoDto?>(trabajador.descansos.firstOrNull()) }
+
+    // Preseleccionar inteligentemente el ciclo [EN CURSO] o el próximo descanso en lugar del primer ciclo de enero
+    val defaultDescanso = remember(trabajador.descansos) {
+        if (trabajador.descansos.isEmpty()) return@remember null
+        val hoy = LocalDate.now()
+
+        // 1. ¿Hay algún descanso en curso hoy?
+        val enCurso = trabajador.descansos.firstOrNull { d ->
+            try {
+                val ini = LocalDate.parse(d.fechaInicio.take(10))
+                val fin = LocalDate.parse(d.fechaFin.take(10))
+                !hoy.isBefore(ini) && !hoy.isAfter(fin)
+            } catch (e: Exception) {
+                false
+            }
+        }
+        if (enCurso != null) return@remember enCurso
+
+        // 2. Si no, buscar el próximo descanso futuro más cercano
+        val proximo = trabajador.descansos
+            .mapNotNull { d ->
+                try {
+                    val ini = LocalDate.parse(d.fechaInicio.take(10))
+                    if (ini.isAfter(hoy)) Pair(d, ini) else null
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            .minByOrNull { it.second }
+            ?.first
+        if (proximo != null) return@remember proximo
+
+        // 3. Fallback: el último registrado
+        trabajador.descansos.lastOrNull()
+    }
+
+    var selectedDescanso by remember { mutableStateOf<DescansoDto?>(defaultDescanso) }
     val selectedFechas = remember { mutableStateListOf<String>() }
     var guardando by remember { mutableStateOf(false) }
 
@@ -115,29 +153,32 @@ fun DetalleTrabajadorScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Slate950,
                     titleContentColor = Color.White
                 ),
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
                         Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Atrás", tint = Color.White)
                     }
                 },
                 title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column {
                         Text(
                             text = trabajador.nombres,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.5.sp,
+                            maxLines = 1,
+                            color = Color.White
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Turno Atípico 20x10",
+                            text = "Turno Atípico 20x10 • ${trabajador.area.ifBlank { "Taller Mina" }}",
                             fontSize = 12.sp,
-                            color = Slate400
+                            color = Slate400,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -248,19 +289,24 @@ fun DetalleTrabajadorScreen(
                 )
             }
 
-            items(trabajador.descansos) { descanso ->
+            itemsIndexed(trabajador.descansos) { index, descanso ->
                 val esSeleccionado = selectedDescanso?.id == descanso.id
                 val hoy = remember { LocalDate.now() }
-                val (esActivoHoy, rangoTexto) = remember(descanso.id) {
+                val numeroCiclo = index + 1
+
+                val (esActivoHoy, esProximo, rangoTexto) = remember(descanso.id) {
                     try {
                         val ini = LocalDate.parse(descanso.fechaInicio.take(10))
                         val fin = LocalDate.parse(descanso.fechaFin.take(10))
                         val activo = !hoy.isBefore(ini) && !hoy.isAfter(fin)
-                        val fmt = DateTimeFormatter.ofPattern("dd MMM")
-                        val str = "${ini.format(fmt)} al ${fin.format(fmt)} (${fin.year})"
-                        Pair(activo, str)
+                        val proximo = ini.isAfter(hoy) && ini.isBefore(hoy.plusDays(30))
+                        val fmt = DateTimeFormatter.ofPattern("dd MMM", Locale("es", "PE"))
+                        val iniStr = ini.format(fmt).replaceFirstChar { it.uppercase() }
+                        val finStr = fin.format(fmt).replaceFirstChar { it.uppercase() }
+                        val str = "$iniStr al $finStr (${fin.year})"
+                        Triple(activo, proximo, str)
                     } catch (e: Exception) {
-                        Pair(false, "${descanso.fechaInicio.take(10)} al ${descanso.fechaFin.take(10)}")
+                        Triple(false, false, "${descanso.fechaInicio.take(10)} al ${descanso.fechaFin.take(10)}")
                     }
                 }
 
@@ -271,40 +317,60 @@ fun DetalleTrabajadorScreen(
                             selectedDescanso = descanso
                             selectedFechas.clear()
                         },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (esSeleccionado) Slate800 else Slate900
                     ),
-                    border = if (esSeleccionado) androidx.compose.foundation.BorderStroke(1.dp, Amber500) else null
+                    border = if (esSeleccionado) {
+                        androidx.compose.foundation.BorderStroke(2.dp, Amber500)
+                    } else {
+                        androidx.compose.foundation.BorderStroke(1.dp, Slate800)
+                    }
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(18.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (esSeleccionado) Amber500 else if (esActivoHoy) Violet500 else Slate700),
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (esSeleccionado) Amber500
+                                        else if (esActivoHoy) Violet500.copy(alpha = 0.25f)
+                                        else Slate800
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (esSeleccionado) Amber500
+                                        else if (esActivoHoy) Violet500
+                                        else Slate700,
+                                        RoundedCornerShape(14.dp)
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "#${descanso.cicloNro}",
-                                    fontSize = 12.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (esSeleccionado) Slate950 else Color.White
+                                    text = "#$numeroCiclo",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (esSeleccionado) Slate950 else if (esActivoHoy) Violet500 else Color.White
                                 )
                             }
+
                             Spacer(modifier = Modifier.width(14.dp))
+
                             Column {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = rangoTexto,
-                                        fontSize = 14.5.sp,
+                                        fontSize = 15.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
                                     )
@@ -314,7 +380,7 @@ fun DetalleTrabajadorScreen(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(6.dp))
                                                 .background(Violet500.copy(alpha = 0.2f))
-                                                .border(1.dp, Violet500.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                                .border(1.dp, Violet500.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
                                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                                         ) {
                                             Text(
@@ -324,19 +390,51 @@ fun DetalleTrabajadorScreen(
                                                 fontWeight = FontWeight.Black
                                             )
                                         }
+                                    } else if (esProximo) {
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(Amber400.copy(alpha = 0.15f))
+                                                .border(1.dp, Amber400.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "PRÓXIMO",
+                                                color = Amber400,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Black
+                                            )
+                                        }
                                     }
                                 }
+
                                 Spacer(modifier = Modifier.height(4.dp))
+
                                 Text(
-                                    text = "${descanso.diasTotales} días libres de descanso",
-                                    fontSize = 12.sp,
-                                    color = Slate400
+                                    text = "Periodo #$numeroCiclo • ${descanso.diasTotales} días de descanso",
+                                    fontSize = 12.5.sp,
+                                    color = Slate400,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
 
                         if (esSeleccionado) {
-                            Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = Amber400, modifier = Modifier.size(20.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(Amber500),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Slate950,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -345,7 +443,7 @@ fun DetalleTrabajadorScreen(
             // Desglose interactivo de los días del bloque seleccionado
             if (selectedDescanso != null && diasDelBloque.isNotEmpty()) {
                 item {
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "DÍAS DEL PERIODO (MARCAR PARA VENDER / ADELANTAR)",
                         fontSize = 12.sp,
@@ -372,19 +470,27 @@ fun DetalleTrabajadorScreen(
                                     }
                                 }
                             },
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = if (isChecked) Amber500.copy(alpha = 0.15f) else Slate900
-                        )
+                        ),
+                        border = if (isChecked) {
+                            androidx.compose.foundation.BorderStroke(1.5.dp, Amber500)
+                        } else {
+                            androidx.compose.foundation.BorderStroke(1.dp, Slate800)
+                        }
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
                                 Checkbox(
                                     checked = isChecked,
                                     onCheckedChange = { check ->
@@ -404,27 +510,31 @@ fun DetalleTrabajadorScreen(
                                         uncheckedColor = Slate700
                                     )
                                 )
+
                                 val diaFormateado = remember(diaIso) {
                                     try {
                                         val d = LocalDate.parse(diaIso)
-                                        val diaSem = d.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale("es", "PE")).replaceFirstChar { it.uppercase() }
-                                        val mesNom = d.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale("es", "PE")).replaceFirstChar { it.uppercase() }
-                                        "$diaSem, ${d.dayOfMonth} $mesNom ${d.year}"
+                                        val diaSem = d.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, Locale("es", "PE")).replaceFirstChar { it.uppercase() }
+                                        val mesNom = d.month.getDisplayName(java.time.format.TextStyle.FULL, Locale("es", "PE")).replaceFirstChar { it.uppercase() }
+                                        "$diaSem, ${d.dayOfMonth} de $mesNom"
                                     } catch (e: Exception) {
                                         diaIso
                                     }
                                 }
+
                                 Spacer(modifier = Modifier.width(10.dp))
+
                                 Column {
                                     Text(
                                         text = diaFormateado,
-                                        fontSize = 14.sp,
+                                        fontSize = 14.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (isChecked) Amber400 else Color.White
                                     )
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = "Fecha: $diaIso",
-                                        fontSize = 11.sp,
+                                        fontSize = 11.5.sp,
                                         color = Slate400
                                     )
                                 }
@@ -434,7 +544,12 @@ fun DetalleTrabajadorScreen(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(if (isChecked) Amber500.copy(alpha = 0.2f) else Slate800)
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    .border(
+                                        1.dp,
+                                        if (isChecked) Amber500.copy(alpha = 0.5f) else Color.Transparent,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
                             ) {
                                 Text(
                                     text = if (isChecked) "SELECCIONADO" else "DISPONIBLE",

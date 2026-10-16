@@ -28,7 +28,7 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -85,26 +85,47 @@ fun TrabajadoresScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Slate950,
                     titleContentColor = Color.White
                 ),
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.People,
-                            contentDescription = null,
-                            tint = Amber400,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "EQUIPO TALLER MINA",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 0.5.sp
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Slate900)
+                                .border(1.dp, Slate800, RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.People,
+                                contentDescription = null,
+                                tint = Amber400,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "EQUIPO TALLER MINA",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.6.sp,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Colaboradores y Programación 20x10",
+                                fontSize = 12.sp,
+                                color = Slate400,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             )
@@ -305,125 +326,152 @@ fun CardTrabajadorItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 7.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Slate900)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Slate900),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Slate800)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(20.dp)
         ) {
-            // Inicial Avatar con color acorde al estado
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(estado.colorEstado.copy(alpha = 0.18f))
-                    .border(1.dp, estado.colorEstado.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center
+            // Fila 1 Superior: Badge Operativo + Cantidad de periodos
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = trabajador.nombres.take(1).uppercase(),
-                    color = estado.colorEstado,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 18.sp
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(estado.colorEstado.copy(alpha = 0.16f))
+                        .border(1.dp, estado.colorEstado.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = estado.icono,
+                            contentDescription = null,
+                            tint = estado.colorEstado,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = estado.etiquetaEstado.uppercase(),
+                            color = estado.colorEstado,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Slate800)
+                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "${trabajador.descansos.size} turnos 2026",
+                        color = Slate400,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                // Nombre y Badge de estado operativo
+            // Fila 2: Avatar Grande (52dp) + Nombre Completo (sin recortes) + Área
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(estado.colorEstado.copy(alpha = 0.18f))
+                        .border(1.dp, estado.colorEstado.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = trabajador.nombres.take(1).uppercase(),
+                        color = estado.colorEstado,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = trabajador.nombres,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        lineHeight = 22.sp,
+                        maxLines = 2
+                    )
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Text(
+                        text = trabajador.area.ifBlank { "Taller Mina" },
+                        color = Slate400,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Fila 3: Detalle Operativo en contenedor oscuro
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Slate950)
+                    .border(1.dp, Slate800, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = trabajador.nombres,
-                        color = Color.White,
-                        fontSize = 14.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(7.dp))
-                            .background(estado.colorEstado.copy(alpha = 0.15f))
-                            .border(1.dp, estado.colorEstado.copy(alpha = 0.35f), RoundedCornerShape(7.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = estado.icono,
-                                contentDescription = null,
-                                tint = estado.colorEstado,
-                                modifier = Modifier.size(11.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = estado.etiquetaEstado,
-                                color = estado.colorEstado,
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.EventAvailable,
+                            contentDescription = null,
+                            tint = Amber400,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = estado.detalleFechas,
+                            color = Slate200,
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(5.dp))
-
-                // Detalle operativo de fechas
-                Text(
-                    text = estado.detalleFechas,
-                    color = Slate300,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Normal
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Fila inferior: Área y total de periodos
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = trabajador.area.ifBlank { "Taller Mina" },
-                        color = Slate400,
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    Text(
-                        text = "•",
-                        color = Slate600,
-                        fontSize = 11.5.sp
-                    )
-
-                    Text(
-                        text = "${trabajador.descansos.size} periodos 2026",
-                        color = Slate400,
-                        fontSize = 11.5.sp
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = Slate600,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Slate600,
-                modifier = Modifier.size(18.dp)
-            )
         }
     }
 }
