@@ -113,6 +113,7 @@ object NotificationHelper {
             .setSound(soundUri)
             .setVibrate(if (isUrgent) URGENT_VIBRATION_PATTERN else longArrayOf(0, 250, 150, 250))
             .setContentIntent(pendingIntent)
+            .setOnlyAlertOnce(true)
             .setAutoCancel(true)
 
         try {
@@ -140,7 +141,7 @@ object NotificationHelper {
             sendShiftNotification(context, 1001, titulo, mensaje, CHANNEL_ID_URGENT, isUrgent = true)
         }
 
-        val retornosHoy = eventos.filter { it.diasRestantes == 0 && it.tipo == "FIN_DESCANSO" }
+        val retornosHoy = eventos.filter { it.diasRestantes == 0 && (it.tipo == "FIN_DESCANSO" || it.tipo == "EN_DESCANSO") }
         if (retornosHoy.isNotEmpty()) {
             val nombres = retornosHoy.joinToString(", ") { it.trabajadorNombre }
             val titulo = if (retornosHoy.size == 1) "¡HOY RETORNO A MINA!" else "¡HOY ${retornosHoy.size} RETORNAN A MINA!"
@@ -157,11 +158,11 @@ object NotificationHelper {
             sendShiftNotification(context, 1003, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
         }
 
-        val retornosManana = eventos.filter { it.diasRestantes == 1 && it.tipo == "FIN_DESCANSO" }
+        val retornosManana = eventos.filter { it.diasRestantes == 1 && (it.tipo == "FIN_DESCANSO" || it.tipo == "EN_DESCANSO") }
         if (retornosManana.isNotEmpty()) {
             val nombres = retornosManana.joinToString(", ") { it.trabajadorNombre }
             val titulo = "Falta 1 Día: Mañana retorno a mina"
-            val mensaje = "Último día de descanso. Mañana suben a mina: $nombres."
+            val mensaje = "Último día de descanso. Mañana suben a mina a iniciar labores: $nombres."
             sendShiftNotification(context, 1004, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
         }
 
@@ -172,6 +173,37 @@ object NotificationHelper {
             val titulo = "Faltan 2 Días para tu descanso"
             val mensaje = "Estás a 48 horas de finalizar guardia e iniciar tus 10 días libres: $nombres."
             sendShiftNotification(context, 1005, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
+        }
+
+        val retornosDosDias = eventos.filter { it.diasRestantes == 2 && (it.tipo == "FIN_DESCANSO" || it.tipo == "EN_DESCANSO") }
+        if (retornosDosDias.isNotEmpty()) {
+            val nombres = retornosDosDias.joinToString(", ") { it.trabajadorNombre }
+            val titulo = "Faltan 2 Días para retornar a mina"
+            val mensaje = "Quedan 48 horas de descanso. En 2 días retornan a labores en Taller Mina: $nombres."
+            sendShiftNotification(context, 1006, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
+        }
+
+        // 4. EVENTOS DE PERMISO O VACACIONES ESPECIALES
+        val permisosHoy = eventos.filter { it.diasRestantes == 0 && it.tipo == "PERMISO_ACTIVO" }
+        if (permisosHoy.isNotEmpty()) {
+            val nombres = permisosHoy.joinToString(", ") { it.trabajadorNombre }
+            sendShiftNotification(
+                context, 1007,
+                "¡Permiso / Vacaciones Hoy!",
+                "Inicia periodo de permiso o descanso autorizado: $nombres.",
+                CHANNEL_ID_REGULAR, isUrgent = false
+            )
+        }
+
+        val permisosProximos = eventos.filter { (it.diasRestantes in 1..2) && it.tipo == "PERMISO_ACTIVO" }
+        if (permisosProximos.isNotEmpty()) {
+            val nombres = permisosProximos.joinToString(", ") { "${it.trabajadorNombre} (en ${it.diasRestantes}d)" }
+            sendShiftNotification(
+                context, 1008,
+                "Próximo Permiso / Vacaciones",
+                "Permiso programado en las próximas 48 horas: $nombres.",
+                CHANNEL_ID_REGULAR, isUrgent = false
+            )
         }
     }
 }
