@@ -130,6 +130,7 @@ fun DetalleTrabajadorScreen(
 
     var selectedDescanso by remember { mutableStateOf<DescansoDto?>(defaultDescanso) }
     val selectedFechas = remember { mutableStateListOf<String>() }
+    val fechasYaVendidas = remember { mutableStateListOf<String>() }
     var guardando by remember { mutableStateOf(false) }
 
     val diasDelBloque = remember(selectedDescanso?.id) {
@@ -211,6 +212,7 @@ fun DetalleTrabajadorScreen(
                                         )
                                     )
                                     snackbarHostState.showSnackbar(res.message.ifBlank { "¡${selectedFechas.size} días guardados como Venta (VD)!" })
+                                    fechasYaVendidas.addAll(selectedFechas)
                                     selectedFechas.clear()
                                 } catch (e: Exception) {
                                     snackbarHostState.showSnackbar("Error: ${e.localizedMessage}")
@@ -480,6 +482,7 @@ fun DetalleTrabajadorScreen(
                             androidx.compose.foundation.BorderStroke(1.dp, Slate800)
                         }
                     ) {
+                        val yaVendida = diaIso in fechasYaVendidas
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -493,7 +496,9 @@ fun DetalleTrabajadorScreen(
                             ) {
                                 Checkbox(
                                     checked = isChecked,
+                                    enabled = !yaVendida,
                                     onCheckedChange = { check ->
+                                        if (yaVendida) return@Checkbox
                                         if (check) {
                                             if (selectedFechas.size >= 5) {
                                                 scope.launch { snackbarHostState.showSnackbar("Régimen 20x10: Solo se permite vender hasta 5 días por ciclo.") }
@@ -529,7 +534,7 @@ fun DetalleTrabajadorScreen(
                                         text = diaFormateado,
                                         fontSize = 14.5.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isChecked) Amber400 else Color.White
+                                        color = if (isChecked) Amber400 else if (yaVendida) Slate400 else Color.White
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
@@ -543,19 +548,25 @@ fun DetalleTrabajadorScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isChecked) Amber500.copy(alpha = 0.2f) else Slate800)
+                                    .background(
+                                        if (isChecked) Amber500.copy(alpha = 0.2f)
+                                        else if (yaVendida) Emerald500.copy(alpha = 0.2f)
+                                        else Slate800
+                                    )
                                     .border(
                                         1.dp,
-                                        if (isChecked) Amber500.copy(alpha = 0.5f) else Color.Transparent,
+                                        if (isChecked) Amber500.copy(alpha = 0.5f)
+                                        else if (yaVendida) Emerald500.copy(alpha = 0.6f)
+                                        else Color.Transparent,
                                         RoundedCornerShape(8.dp)
                                     )
                                     .padding(horizontal = 10.dp, vertical = 5.dp)
                             ) {
                                 Text(
-                                    text = if (isChecked) "SELECCIONADO" else "DISPONIBLE",
+                                    text = if (isChecked) "SELECCIONADO" else if (yaVendida) "VENDIDO (VD)" else "DISPONIBLE",
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isChecked) Amber400 else Emerald500
+                                    color = if (isChecked) Amber400 else if (yaVendida) Emerald500 else Slate300
                                 )
                             }
                         }

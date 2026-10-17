@@ -31,7 +31,11 @@ object ApiClient {
         if (!token.isNullOrBlank()) {
             builder.header("Authorization", "Bearer $token")
         }
-        chain.proceed(builder.build())
+        val response = chain.proceed(builder.build())
+        if (response.code == 401) {
+            SessionManager.clearSession()
+        }
+        response
     }
 
     private val okHttpClient = OkHttpClient.Builder()

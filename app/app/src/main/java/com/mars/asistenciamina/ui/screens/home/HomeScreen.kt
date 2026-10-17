@@ -88,6 +88,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.mars.asistenciamina.ui.theme.Slate950
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.BorderStroke
 import com.mars.asistenciamina.data.local.SessionManager
 import com.mars.asistenciamina.util.NotificationHelper
 
@@ -102,6 +112,12 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsState()
     val usuarioActual = remember { SessionManager.getUser() }
     var yaNotificado by rememberSaveable { mutableStateOf(false) }
+    var showConfigModal by rememberSaveable { mutableStateOf(false) }
+
+    // Auto-recarga automática al iniciar o cuando entra en foco la pantalla
+    LaunchedEffect(Unit) {
+        viewModel.cargarTurnos(null)
+    }
 
     // Si hay eventos cargados, notificar automáticamente en la barra de notificaciones una sola vez por sesión
     LaunchedEffect(state) {
@@ -159,6 +175,7 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    // Botón de notificaciones push de relevos
                     IconButton(
                         onClick = {
                             if (state is HomeUiState.Success) {
@@ -194,26 +211,17 @@ fun HomeScreen(
                             }
                         }
                     }
+
+                    // Tuerca de Configuración (reemplaza recarga y salir directos)
                     IconButton(
-                        onClick = { viewModel.cargarTurnos(null) },
+                        onClick = { showConfigModal = true },
                         modifier = Modifier.size(44.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Actualizar",
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Configuraciones",
                             tint = Slate200,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    IconButton(
-                        onClick = onLogout,
-                        modifier = Modifier.size(44.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = "Cerrar Sesión",
-                            tint = Rose500,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(23.dp)
                         )
                     }
                 }
@@ -297,6 +305,56 @@ fun HomeScreen(
                         .padding(innerPadding),
                     contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
+                    // Banner de Modo Sin Conexión
+                    if (uiState.isOffline) {
+                        item {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = Amber500.copy(alpha = 0.12f)),
+                                border = BorderStroke(1.dp, Amber500.copy(alpha = 0.35f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(Amber500.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CloudOff,
+                                            contentDescription = null,
+                                            tint = Amber400,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "MODO SIN CONEXIÓN ACTIVO",
+                                            color = Amber400,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Black,
+                                            letterSpacing = 0.5.sp
+                                        )
+                                        Text(
+                                            text = "Mostrando datos guardados localmente. Puedes seguir consultando relevos y turnos.",
+                                            color = Slate300,
+                                            fontSize = 11.sp,
+                                            lineHeight = 15.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Header Card con Resumen
                     item {
                         Card(
@@ -477,6 +535,302 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+    }
+
+    // Modal Bottom Sheet de Configuración
+    if (showConfigModal) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showConfigModal = false },
+            sheetState = sheetState,
+            containerColor = Slate900,
+            contentColor = Color.White,
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 12.dp)
+                        .size(width = 44.dp, height = 4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Slate700)
+                )
+            }
+        ) {
+            ConfiguracionSheetContent(
+                usuario = usuarioActual,
+                isOffline = (state as? HomeUiState.Success)?.isOffline == true,
+                onLogout = {
+                    showConfigModal = false
+                    onLogout()
+                },
+                onClose = { showConfigModal = false }
+            )
+        }
+    }
+}
+
+@Composable
+fun ConfiguracionSheetContent(
+    usuario: com.mars.asistenciamina.data.models.UsuarioDto?,
+    isOffline: Boolean,
+    onLogout: () -> Unit,
+    onClose: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .padding(bottom = 28.dp)
+    ) {
+        // Título del Sheet
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Slate800)
+                        .border(1.dp, Slate700, RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                        tint = Amber400,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Configuración",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Ajustes de cuenta y sistema",
+                        fontSize = 11.5.sp,
+                        color = Slate400
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // Ficha de Usuario Logueado
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Slate950),
+            border = BorderStroke(1.dp, Slate800)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Amber500.copy(alpha = 0.2f))
+                        .border(1.5.dp, Amber500.copy(alpha = 0.6f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val inicial = usuario?.nombres?.firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+                    Text(
+                        text = inicial,
+                        color = Amber400,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = usuario?.nombres ?: "Usuario del Sistema",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = usuario?.email?.ifBlank { "@${usuario.username}" } ?: "asistencia@tallermina.com",
+                        fontSize = 12.sp,
+                        color = Slate400,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (usuario?.rol == "ADMIN") Amber500.copy(alpha = 0.2f) else Slate800)
+                        .border(1.dp, if (usuario?.rol == "ADMIN") Amber500.copy(alpha = 0.5f) else Slate700, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = usuario?.rol ?: "TRABAJADOR",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (usuario?.rol == "ADMIN") Amber400 else Slate300
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Bloque de Estado del Servidor y Régimen
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Slate950),
+            border = BorderStroke(1.dp, Slate800)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Servidor
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Dns,
+                            contentDescription = null,
+                            tint = Slate400,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Servidor VPS",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "asistenciamina.duckdns.org",
+                                fontSize = 11.5.sp,
+                                color = Slate400
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isOffline) Amber500.copy(alpha = 0.15f) else Emerald500.copy(alpha = 0.15f))
+                            .border(1.dp, if (isOffline) Amber500.copy(alpha = 0.5f) else Emerald500.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = if (isOffline) "MODO LOCAL" else "EN LÍNEA",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (isOffline) Amber400 else Emerald500
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Slate800)
+
+                // Notificaciones y Sonidos
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VolumeUp,
+                        contentDescription = null,
+                        tint = Amber400,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "Alertas de Relevo Activas",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Avisos a 2 días, 1 día y alarma especial Día Hoy",
+                            fontSize = 11.5.sp,
+                            color = Slate400
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Slate800)
+
+                // Info de App
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = Slate400,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "Régimen Atípico 20x10",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Versión Móvil 1.0.0 (Taller Mina 2026)",
+                            fontSize = 11.5.sp,
+                            color = Slate400
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Botón de Cerrar Sesión
+        Button(
+            onClick = onLogout,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Rose500.copy(alpha = 0.15f),
+                contentColor = Rose500
+            ),
+            border = BorderStroke(1.dp, Rose500.copy(alpha = 0.4f))
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Logout,
+                contentDescription = null,
+                tint = Rose500,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "Cerrar Sesión",
+                fontSize = 14.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = Rose500
+            )
         }
     }
 }
