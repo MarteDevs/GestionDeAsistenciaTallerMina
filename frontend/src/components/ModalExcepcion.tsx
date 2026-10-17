@@ -178,6 +178,9 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
       const resData = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        }
         throw new Error(resData.error || 'Error al procesar la solicitud');
       }
 

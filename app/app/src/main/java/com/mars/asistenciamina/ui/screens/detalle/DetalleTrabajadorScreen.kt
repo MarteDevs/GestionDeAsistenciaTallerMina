@@ -19,7 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoneAll
@@ -48,6 +48,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -128,10 +129,13 @@ fun DetalleTrabajadorScreen(
         trabajador.descansos.lastOrNull()
     }
 
-    var selectedDescanso by remember { mutableStateOf<DescansoDto?>(defaultDescanso) }
-    val selectedFechas = remember { mutableStateListOf<String>() }
-    val fechasYaVendidas = remember { mutableStateListOf<String>() }
-    var guardando by remember { mutableStateOf(false) }
+    var selectedDescansoId by rememberSaveable { mutableStateOf(defaultDescanso?.id ?: -1) }
+    val selectedDescanso = remember(selectedDescansoId, trabajador.descansos) {
+        trabajador.descansos.firstOrNull { it.id == selectedDescansoId } ?: defaultDescanso
+    }
+    var selectedFechas by rememberSaveable { mutableStateOf(listOf<String>()) }
+    var fechasYaVendidas by rememberSaveable { mutableStateOf(listOf<String>()) }
+    var guardando by rememberSaveable { mutableStateOf(false) }
 
     val diasDelBloque = remember(selectedDescanso?.id) {
         selectedDescanso?.let { d ->
@@ -161,7 +165,7 @@ fun DetalleTrabajadorScreen(
                 ),
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = Color.White)
                     }
                 },
                 title = {
@@ -212,8 +216,8 @@ fun DetalleTrabajadorScreen(
                                         )
                                     )
                                     snackbarHostState.showSnackbar(res.message.ifBlank { "¡${selectedFechas.size} días guardados como Venta (VD)!" })
-                                    fechasYaVendidas.addAll(selectedFechas)
-                                    selectedFechas.clear()
+                                    fechasYaVendidas = (fechasYaVendidas + selectedFechas).distinct()
+                                    selectedFechas = emptyList()
                                 } catch (e: Exception) {
                                     snackbarHostState.showSnackbar("Error: ${e.localizedMessage}")
                                 } finally {
@@ -302,7 +306,7 @@ fun DetalleTrabajadorScreen(
                         val fin = LocalDate.parse(descanso.fechaFin.take(10))
                         val activo = !hoy.isBefore(ini) && !hoy.isAfter(fin)
                         val proximo = ini.isAfter(hoy) && ini.isBefore(hoy.plusDays(30))
-                        val fmt = DateTimeFormatter.ofPattern("dd MMM", Locale("es", "PE"))
+                        val fmt = DateTimeFormatter.ofPattern("dd MMM", Locale.forLanguageTag("es-PE"))
                         val iniStr = ini.format(fmt).replaceFirstChar { it.uppercase() }
                         val finStr = fin.format(fmt).replaceFirstChar { it.uppercase() }
                         val str = "$iniStr al $finStr (${fin.year})"
@@ -316,8 +320,8 @@ fun DetalleTrabajadorScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            selectedDescanso = descanso
-                            selectedFechas.clear()
+                            selectedDescansoId = descanso.id
+                            selectedFechas = emptyList()
                         },
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(
@@ -463,12 +467,12 @@ fun DetalleTrabajadorScreen(
                             .fillMaxWidth()
                             .clickable {
                                 if (isChecked) {
-                                    selectedFechas.remove(diaIso)
+                                    selectedFechas = selectedFechas - diaIso
                                 } else {
                                     if (selectedFechas.size >= 5) {
                                         scope.launch { snackbarHostState.showSnackbar("Régimen 20x10: Solo se permite vender hasta 5 días por ciclo.") }
                                     } else {
-                                        selectedFechas.add(diaIso)
+                                        selectedFechas = selectedFechas + diaIso
                                     }
                                 }
                             },
@@ -503,10 +507,10 @@ fun DetalleTrabajadorScreen(
                                             if (selectedFechas.size >= 5) {
                                                 scope.launch { snackbarHostState.showSnackbar("Régimen 20x10: Solo se permite vender hasta 5 días por ciclo.") }
                                             } else {
-                                                selectedFechas.add(diaIso)
+                                                selectedFechas = selectedFechas + diaIso
                                             }
                                         } else {
-                                            selectedFechas.remove(diaIso)
+                                            selectedFechas = selectedFechas - diaIso
                                         }
                                     },
                                     colors = CheckboxDefaults.colors(
@@ -519,8 +523,8 @@ fun DetalleTrabajadorScreen(
                                 val diaFormateado = remember(diaIso) {
                                     try {
                                         val d = LocalDate.parse(diaIso)
-                                        val diaSem = d.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, Locale("es", "PE")).replaceFirstChar { it.uppercase() }
-                                        val mesNom = d.month.getDisplayName(java.time.format.TextStyle.FULL, Locale("es", "PE")).replaceFirstChar { it.uppercase() }
+                                        val diaSem = d.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, Locale.forLanguageTag("es-PE")).replaceFirstChar { it.uppercase() }
+                                        val mesNom = d.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.forLanguageTag("es-PE")).replaceFirstChar { it.uppercase() }
                                         "$diaSem, ${d.dayOfMonth} de $mesNom"
                                     } catch (e: Exception) {
                                         diaIso

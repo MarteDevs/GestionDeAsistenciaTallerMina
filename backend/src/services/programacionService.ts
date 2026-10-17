@@ -185,7 +185,8 @@ export class ProgramacionService {
     client: any = prisma
   ) {
     const { trabajadorId, fecha, tipo, motivo } = data;
-    const fechaObj = new Date(`${fecha}T00:00:00.000Z`);
+    const fechaLimpia = String(fecha).split('T')[0];
+    const fechaObj = new Date(`${fechaLimpia}T00:00:00.000Z`);
 
     const trabajador = await client.trabajador.findUnique({
       where: { id: trabajadorId },
@@ -266,7 +267,8 @@ export class ProgramacionService {
     client: any = prisma
   ) {
     const { trabajadorId, fecha } = data;
-    const fechaObj = new Date(`${fecha}T00:00:00.000Z`);
+    const fechaLimpia = String(fecha).split('T')[0];
+    const fechaObj = new Date(`${fechaLimpia}T00:00:00.000Z`);
     return await client.excepcion.deleteMany({
       where: {
         trabajadorId,

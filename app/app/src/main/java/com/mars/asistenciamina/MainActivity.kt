@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mars.asistenciamina.data.local.SessionManager
 import com.mars.asistenciamina.data.models.TrabajadorDto
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import com.mars.asistenciamina.ui.screens.detalle.DetalleTrabajadorScreen
 import com.mars.asistenciamina.ui.screens.home.HomeScreen
 import com.mars.asistenciamina.ui.screens.login.LoginScreen
@@ -72,12 +74,26 @@ enum class NavigationTab(
     EQUIPO("Colaboradores", Icons.Default.People)
 }
 
+private val appJson = Json {
+    ignoreUnknownKeys = true
+    coerceInputValues = true
+}
+
 @Composable
 fun AsistenciaMinaApp() {
     val context = LocalContext.current
     var isAuthenticated by rememberSaveable { mutableStateOf(SessionManager.isLoggedIn()) }
     var currentTab by rememberSaveable { mutableStateOf(NavigationTab.HOME) }
-    var selectedTrabajador by remember { mutableStateOf<TrabajadorDto?>(null) }
+    var selectedTrabajadorJson by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedTrabajador = remember(selectedTrabajadorJson) {
+        selectedTrabajadorJson?.let {
+            try {
+                appJson.decodeFromString<TrabajadorDto>(it)
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
 
     // Solicitar permisos de notificación en Android 13+ (TIRAMISU)
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -98,8 +114,8 @@ fun AsistenciaMinaApp() {
         )
     } else if (selectedTrabajador != null) {
         DetalleTrabajadorScreen(
-            trabajador = selectedTrabajador!!,
-            onBack = { selectedTrabajador = null }
+            trabajador = selectedTrabajador,
+            onBack = { selectedTrabajadorJson = null }
         )
     } else {
         Scaffold(
@@ -159,7 +175,7 @@ fun AsistenciaMinaApp() {
                     NavigationTab.EQUIPO -> {
                         TrabajadoresScreen(
                             onSelectTrabajador = { trabajador ->
-                                selectedTrabajador = trabajador
+                                selectedTrabajadorJson = kotlinx.serialization.json.Json.encodeToString(trabajador)
                             }
                         )
                     }

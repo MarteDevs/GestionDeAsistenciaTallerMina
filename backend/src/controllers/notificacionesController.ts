@@ -86,6 +86,13 @@ export class NotificacionesController {
 
           // CASO 1: El colaborador se encuentra ACTUALMENTE en descanso hoy
           if (fiDate <= hoyUtc && ffDate >= hoyUtc) {
+            const excepcionHoy = excepcionesMap.get(fechaHoyStr);
+            if (excepcionHoy && excepcionHoy.tipo === 'VENTA_DESCANSO') {
+              // El colaborador vendió este día de descanso y está laborando activamente hoy.
+              // Evitamos emitir alerta contradictoria de descanso para hoy, ya que CASO 3 reporta VENTA_ACTIVA.
+              continue;
+            }
+
             const diasParaFin = Math.round((ffDate.getTime() - hoyUtc.getTime()) / (1000 * 60 * 60 * 24));
             const subidaDate = new Date(ffDate.getTime() + 24 * 60 * 60 * 1000);
             const subidaStr = ProgramacionService.formatFechaIso(subidaDate);

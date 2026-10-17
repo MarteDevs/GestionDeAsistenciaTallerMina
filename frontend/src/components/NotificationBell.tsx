@@ -55,9 +55,31 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onSelectFech
         }
       );
       if (res.ok) {
-        const data = await res.json();
-        setEventos(data.eventos || []);
-        setResumen(data.resumen || null);
+        const json = await res.json();
+        const rawEventos = json.data || json.eventos || [];
+        const stats = json.estadisticas || json.resumen || null;
+        
+        const adaptados: EventoNotificacion[] = rawEventos.map((e: any) => ({
+          trabajadorId: e.trabajadorId,
+          trabajadorNombre: e.nombres || e.trabajadorNombre,
+          tipo: e.tipo,
+          titulo: e.descripcion,
+          descripcion: e.descripcion,
+          fecha: e.fechaEvento || e.fecha,
+          diasRestantes: e.diasRestantes,
+          esHoy: e.diasRestantes === 0,
+        }));
+        
+        setEventos(adaptados);
+        if (stats) {
+          setResumen({
+            total: stats.totalEventos ?? stats.total ?? 0,
+            hoy: stats.hoy ?? 0,
+            inicianDescansoProximos: stats.iniciosDescanso ?? stats.inicianDescansoProximos ?? 0,
+            retornanTrabajoProximos: stats.finesDescanso ?? stats.retornanTrabajoProximos ?? 0,
+            ventasOPermisosActivos: stats.ventas ?? stats.ventasOPermisosActivos ?? 0,
+          });
+        }
       }
     } catch (err) {
       console.error('Error al cargar notificaciones:', err);
