@@ -166,7 +166,7 @@ fun HomeScreen(
                                 color = Color.White
                             )
                             Text(
-                                text = if (usuarioActual != null) "Hola, ${usuarioActual.nombres.split(" ").firstOrNull() ?: usuarioActual.nombres}" else "Operación 20x10 Mina",
+                                text = if (usuarioActual != null) "Hola, ${usuarioActual.nombres.split(" ").firstOrNull() ?: usuarioActual.nombres}" else "Operación 30x10 Mina",
                                 fontSize = 12.sp,
                                 color = Slate400,
                                 fontWeight = FontWeight.Medium
@@ -788,7 +788,7 @@ fun ConfiguracionSheetContent(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            text = "Régimen Atípico 20x10",
+                            text = "Régimen Atípico 30x10",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White

@@ -111,7 +111,7 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
         const diasVendidos = diasBloque.filter((d) => d.estado === 'VD').length;
         const cupo = Math.max(0, 5 - diasVendidos);
         if (fechasSeleccionadas.length >= cupo) {
-          setError(`Por normativa 20x10 solo se permite vender un máximo de 5 días por ciclo. Cupo disponible restante: ${cupo} día(s).`);
+          setError(`Por normativa 30x10 solo se permite vender un máximo de 5 días por ciclo. Cupo disponible restante: ${cupo} día(s).`);
           return;
         }
       }

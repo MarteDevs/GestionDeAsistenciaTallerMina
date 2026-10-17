@@ -50,7 +50,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
   const [nombres, setNombres] = useState('');
   const [area, setArea] = useState('Taller Mina');
   const [fechaInicioTrabajo, setFechaInicioTrabajo] = useState('');
-  const [diasTrabajo, setDiasTrabajo] = useState<number>(20);
+  const [diasTrabajo, setDiasTrabajo] = useState<number>(30);
   const [diasDescanso, setDiasDescanso] = useState<number>(10);
 
   const [proyectando2027, setProyectando2027] = useState(false);
@@ -87,7 +87,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
     setNombres('');
     setArea('Taller Mina');
     setFechaInicioTrabajo('');
-    setDiasTrabajo(20);
+    setDiasTrabajo(30);
     setDiasDescanso(10);
     setMensajeError(null);
   };
@@ -155,7 +155,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
         if (!res.ok) throw new Error(data.error);
 
         // Feedback positivo y cierre automático suave para que el usuario vea su nueva fila en la grilla
-        setMensajeExito(`¡Colaborador ${nombres} registrado con éxito! Turnos 20x10 calculados.`);
+        setMensajeExito(`¡Colaborador ${nombres} registrado con éxito! Turnos 30x10 calculados.`);
         onTrabajadoresActualizados();
 
         setTimeout(() => {

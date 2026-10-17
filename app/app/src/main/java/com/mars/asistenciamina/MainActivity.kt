@@ -47,6 +47,13 @@ import com.mars.asistenciamina.ui.screens.trabajadores.TrabajadoresScreen
 import com.mars.asistenciamina.ui.theme.Amber400
 import com.mars.asistenciamina.ui.theme.Amber500
 import com.mars.asistenciamina.ui.theme.AsistenciaMinaTheme
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.mars.asistenciamina.worker.RelevosSyncWorker
+import java.util.concurrent.TimeUnit
 import com.mars.asistenciamina.ui.theme.Slate400
 import com.mars.asistenciamina.ui.theme.Slate900
 import com.mars.asistenciamina.ui.theme.Slate950
@@ -57,11 +64,35 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SessionManager.init(this)
         NotificationHelper.createNotificationChannel(this)
+        setupBackgroundRelevosWorker()
         enableEdgeToEdge()
         setContent {
             AsistenciaMinaTheme(darkTheme = true) {
                 AsistenciaMinaApp()
             }
+        }
+    }
+
+    private fun setupBackgroundRelevosWorker() {
+        try {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val syncRequest = PeriodicWorkRequestBuilder<RelevosSyncWorker>(
+                repeatInterval = 6,
+                repeatIntervalTimeUnit = TimeUnit.HOURS
+            )
+                .setConstraints(constraints)
+                .build()
+
+            WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+                RelevosSyncWorker.WORK_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,
+                syncRequest
+            )
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error configurando WorkManager: ${e.message}")
         }
     }
 }

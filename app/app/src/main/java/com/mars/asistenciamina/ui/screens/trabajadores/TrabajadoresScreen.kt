@@ -122,7 +122,7 @@ fun TrabajadoresScreen(
                                 color = Color.White
                             )
                             Text(
-                                text = "Colaboradores y Programación 20x10",
+                                text = "Colaboradores y Programación 30x10",
                                 fontSize = 12.sp,
                                 color = Slate400,
                                 fontWeight = FontWeight.Medium
@@ -358,7 +358,7 @@ fun obtenerEstadoOperativo(descansos: List<DescansoDto>): EstadoOperativoTrabaja
     return EstadoOperativoTrabajador(
         enDescanso = false,
         etiquetaEstado = "En Guardia Mina",
-        detalleFechas = "Ciclo 20x10 cumplido",
+        detalleFechas = "Ciclo 30x10 cumplido",
         colorEstado = Emerald500,
         icono = Icons.Default.Construction
     )

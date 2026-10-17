@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { ModalExcepcion } from './ModalExcepcion';
 import {
   Calendar as CalendarIcon,
@@ -6,7 +7,9 @@ import {
   ChevronRight,
   Search,
   Filter,
-  Info
+  Info,
+  FileSpreadsheet,
+  Printer
 } from 'lucide-react';
 
 interface EncabezadoDia {
@@ -228,6 +231,72 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
     return coincideTexto && coincideArea;
   }) || [];
 
+  const exportarExcel = () => {
+    if (!data || !data.filas) return;
+
+    const encabezadosDias = data.encabezados.map(
+      (e) => `${e.diaNumero} (${e.diaSemana})`
+    );
+    const headers = [
+      'N°',
+      'Colaborador',
+      'Área',
+      ...encabezadosDias,
+      'Trabajados (T)',
+      'Descanso (DL)',
+      'Venta (VD)',
+      'Permiso (P)',
+    ];
+
+    const rows = filasFiltradas.map((f, idx) => {
+      const diasValores = f.dias.map((d) => (d.estado === '1' ? '1' : d.estado));
+      return [
+        idx + 1,
+        f.nombres,
+        f.area,
+        ...diasValores,
+        f.resumen.totalTrabajados,
+        f.resumen.totalDescansos,
+        f.resumen.totalVentas,
+        f.resumen.totalPermisos,
+      ];
+    });
+
+    const wsData = [
+      ['PROGRAMACIÓN DE ASISTENCIA Y TURNOS - TALLER MINA (RÉGIMEN ATÍPICO 30x10)'],
+      [`Período: ${MESES[mes - 1]} ${anio} | Colaboradores listados: ${filasFiltradas.length}`],
+      [`Fecha de emisión: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}`],
+      [],
+      headers,
+      ...rows,
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Ajustar anchos de columnas en Excel
+    ws['!cols'] = [
+      { wch: 4 },
+      { wch: 32 },
+      { wch: 20 },
+      ...data.encabezados.map(() => ({ wch: 5 })),
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 14 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `Planilla ${MESES[mes - 1]} ${anio}`);
+    XLSX.writeFile(
+      wb,
+      `Planilla_Taller_Mina_30x10_${MESES[mes - 1]}_${anio}.xlsx`
+    );
+  };
+
+  const exportarPDF = () => {
+    window.print();
+  };
+
   return (
     <div className="w-full space-y-3">
       {/* Barra de Control y Navegación */}
@@ -322,29 +391,70 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
           </div>
 
           {/* Leyenda y Explicación Visual */}
-          <div className="flex items-center space-x-3 text-xs bg-slate-50 border border-slate-100 rounded-xl p-1.5 px-3">
-            <div className="flex items-center space-x-1.5" title="Días laborales normales representados de forma limpia para evitar ruido visual">
-              <span className="w-2 h-2 rounded-full bg-slate-300 inline-block"></span>
-              <span className="font-medium text-slate-600 text-[11px]">Laborable</span>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center space-x-3 text-xs bg-slate-50 border border-slate-100 rounded-xl p-1.5 px-3">
+              <div className="flex items-center space-x-1.5" title="Días laborales normales representados de forma limpia para evitar ruido visual">
+                <span className="w-2 h-2 rounded-full bg-slate-300 inline-block"></span>
+                <span className="font-medium text-slate-600 text-[11px]">Laborable</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <span className="px-1 py-0.5 rounded bg-purple-100 text-purple-800 font-bold text-[10px]">DL</span>
+                <span className="font-semibold text-purple-900 text-[11px]">Descanso</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <span className="px-1 py-0.5 rounded bg-emerald-500 text-white font-bold text-[9px]">VD</span>
+                <span className="font-semibold text-emerald-900 text-[11px]">Venta</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <span className="px-1 py-0.5 rounded bg-rose-500 text-white font-bold text-[9px]">P</span>
+                <span className="font-semibold text-rose-900 text-[11px]">Permiso</span>
+              </div>
             </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="px-1 py-0.5 rounded bg-purple-100 text-purple-800 font-bold text-[10px]">DL</span>
-              <span className="font-semibold text-purple-900 text-[11px]">Descanso</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="px-1 py-0.5 rounded bg-emerald-500 text-white font-bold text-[9px]">VD</span>
-              <span className="font-semibold text-emerald-900 text-[11px]">Venta</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="px-1 py-0.5 rounded bg-rose-500 text-white font-bold text-[9px]">P</span>
-              <span className="font-semibold text-rose-900 text-[11px]">Permiso</span>
+
+            {/* Botones de Exportación Oficial */}
+            <div className="flex items-center space-x-1.5 no-print">
+              <button
+                onClick={exportarExcel}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition hover:scale-[1.02] active:scale-[0.98]"
+                title="Descargar planilla oficial en Microsoft Excel (.xlsx)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Exportar Excel</span>
+              </button>
+
+              <button
+                onClick={exportarPDF}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition hover:scale-[1.02] active:scale-[0.98]"
+                title="Imprimir o guardar reporte en PDF apaisado"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Exportar PDF</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Cabecera Oficial Exclusiva para Documento PDF / Impresión */}
+      <div className="print-only mb-4 p-4 bg-slate-50 border-2 border-slate-900 rounded-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-base font-black text-slate-950 uppercase tracking-tight">
+              TALLER MINA — PROGRAMACIÓN DE ASISTENCIA Y RELEVOS DE GUARDIA
+            </h1>
+            <p className="text-xs font-bold text-slate-800">
+              RÉGIMEN ATÍPICO 30x10 • PERÍODO OPERATIVO: {MESES[mes - 1]?.toUpperCase()} {anio}
+            </p>
+          </div>
+          <div className="text-right text-[10px] text-slate-700">
+            <p>Emisión: {new Date().toLocaleDateString('es-PE')} {new Date().toLocaleTimeString('es-PE')}</p>
+            <p className="font-black">Total Colaboradores: {filasFiltradas.length}</p>
+          </div>
+        </div>
+      </div>
+
       {/* Mensaje de Ayuda UX */}
-      <div className="flex items-center justify-between text-[11px] text-slate-500 px-2">
+      <div className="flex items-center justify-between text-[11px] text-slate-500 px-2 no-print">
         <span className="flex items-center space-x-1">
           <Info className="w-3.5 h-3.5 text-amber-500" />
           <span><b>Tip Operativo:</b> Pasa el cursor por cualquier fila o día para resaltar el cruce (modo cruz). Haz clic en una celda para vender o registrar permisos en bloque (1, 2, 3 o 5 días).</span>
@@ -538,6 +648,22 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
           </div>
         </div>
       )}
+
+      {/* Firmas de Control para Reporte Impreso / PDF */}
+      <div className="print-only mt-8 pt-6 border-t border-slate-300">
+        <div className="grid grid-cols-2 gap-12 text-center text-xs">
+          <div>
+            <div className="border-b border-slate-700 w-3/4 mx-auto mb-2"></div>
+            <p className="font-bold text-slate-900">SUPERVISOR DE GUARDIA</p>
+            <p className="text-[10px] text-slate-500">Taller Mina Operaciones</p>
+          </div>
+          <div>
+            <div className="border-b border-slate-700 w-3/4 mx-auto mb-2"></div>
+            <p className="font-bold text-slate-900">JEFE DE ÁREA / RRHH</p>
+            <p className="text-[10px] text-slate-500">Aprobación Oficial Régimen 30x10</p>
+          </div>
+        </div>
+      </div>
 
       {/* Modal de Excepciones por Rango */}
       <ModalExcepcion

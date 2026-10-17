@@ -229,7 +229,7 @@ export class ProgramacionService {
 
       if (ventasEnCiclo >= 5) {
         throw new Error(
-          `Reglamento 20x10: Este ciclo de descanso ya cuenta con el tope máximo legal de 5 días vendidos.`
+          `Reglamento 30x10: Este ciclo de descanso ya cuenta con el tope máximo legal de 5 días vendidos.`
         );
       }
     }

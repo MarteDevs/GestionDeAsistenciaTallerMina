@@ -121,7 +121,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Control de Asistencia & Relevos 20x10",
+                text = "Control de Asistencia & Relevos 30x10",
                 color = Slate400,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium

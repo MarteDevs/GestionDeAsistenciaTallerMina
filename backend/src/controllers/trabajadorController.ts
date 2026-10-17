@@ -34,7 +34,7 @@ export class TrabajadorController {
         area,
         fechaInicioTrabajo,
         diasDescanso = 10,
-        diasTrabajo = 20,
+        diasTrabajo = 30,
       } = req.body;
 
       if (!nombres || !area) {
@@ -53,7 +53,7 @@ export class TrabajadorController {
 
         if (fechaInicioTrabajo) {
           const cantDescanso = parseInt(diasDescanso) || 10;
-          const cantTrabajo = parseInt(diasTrabajo) || 20;
+          const cantTrabajo = parseInt(diasTrabajo) || 30;
 
           const inicioTrabajo = new Date(`${String(fechaInicioTrabajo).split('T')[0]}T00:00:00.000Z`);
           const anioLimite = inicioTrabajo.getUTCFullYear();
@@ -169,7 +169,7 @@ export class TrabajadorController {
           const ultimoDescanso = t.descansosProgramados[0];
           const cantDiasDescanso = ultimoDescanso.cantidadDias || 10;
           
-          let proximaFi = new Date(ultimoDescanso.fechaFin.getTime() + 21 * 24 * 60 * 60 * 1000);
+          let proximaFi = new Date(ultimoDescanso.fechaFin.getTime() + 31 * 24 * 60 * 60 * 1000);
 
           while (proximaFi.getUTCFullYear() <= targetYear) {
             const proximaFf = new Date(proximaFi.getTime() + (cantDiasDescanso - 1) * 24 * 60 * 60 * 1000);
@@ -182,7 +182,7 @@ export class TrabajadorController {
             });
             total++;
 
-            proximaFi = new Date(proximaFf.getTime() + 21 * 24 * 60 * 60 * 1000);
+            proximaFi = new Date(proximaFf.getTime() + 31 * 24 * 60 * 60 * 1000);
           }
         }
 
@@ -198,7 +198,7 @@ export class TrabajadorController {
       res.json({
         success: true,
         generados,
-        message: `Se han proyectado ${generados} descansos para el año ${targetYear} exitosamente.`,
+        message: `Se han proyectado ${generados} descansos para el año ${targetYear} exitosamente (Régimen 30x10).`,
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
@@ -221,7 +221,7 @@ export class TrabajadorController {
       if (tipo === 'VENTA_DESCANSO' && fechas.length > 5) {
         res.status(400).json({
           success: false,
-          error: 'Reglamento 20x10: No se pueden vender más de 5 días de descanso por ciclo.',
+          error: 'Reglamento 30x10: No se pueden vender más de 5 días de descanso por ciclo.',
         });
         return;
       }

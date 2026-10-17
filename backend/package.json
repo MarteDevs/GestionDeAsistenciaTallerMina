@@ -10,7 +10,8 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "migrar:areas-marco": "ts-node scripts/actualizarAreasYEliminarMarco.ts"
+    "migrar:areas-marco": "ts-node scripts/actualizarAreasYEliminarMarco.ts",
+    "migrar:30x10": "ts-node scripts/actualizar_regimen_30x10.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.10.2",

@@ -32,7 +32,7 @@ app.post('/api/excepciones', authMiddleware, ProgramacionController.crearExcepci
 app.post('/api/excepciones/rango', authMiddleware, TrabajadorController.registrarExcepcionesRango);
 app.delete('/api/excepciones', authMiddleware, ProgramacionController.eliminarExcepcion);
 
-// 3. Gestión de Trabajadores y Proyección 20x10
+// 3. Gestión de Trabajadores y Proyección 30x10
 app.get('/api/trabajadores', authMiddleware, TrabajadorController.listar);
 app.post('/api/trabajadores', authMiddleware, requireAdmin, TrabajadorController.crear);
 app.put('/api/trabajadores/:id', authMiddleware, requireAdmin, TrabajadorController.actualizar);

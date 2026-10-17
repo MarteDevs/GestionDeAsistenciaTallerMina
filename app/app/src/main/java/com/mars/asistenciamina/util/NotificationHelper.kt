@@ -136,7 +136,7 @@ object NotificationHelper {
         if (salidasHoy.isNotEmpty()) {
             val nombres = salidasHoy.joinToString(", ") { it.trabajadorNombre }
             val titulo = if (salidasHoy.size == 1) "¡HOY CULMINA TU GUARDIA!" else "¡HOY ${salidasHoy.size} RELEVOS A DESCANSO!"
-            val mensaje = "Hoy culmina la guardia de 20 días en mina e inicia el descanso de 10 días: $nombres."
+            val mensaje = "Hoy culmina la guardia de 30 días en mina e inicia el descanso de 10 días: $nombres."
             sendShiftNotification(context, 1001, titulo, mensaje, CHANNEL_ID_URGENT, isUrgent = true)
         }
 

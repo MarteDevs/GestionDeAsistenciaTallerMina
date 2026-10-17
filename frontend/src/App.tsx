@@ -67,7 +67,7 @@ const AppContent: React.FC = () => {
                 </span>
               </div>
               <span className="text-[10px] text-slate-400 font-medium">
-                Gestión de Turnos, Proyección 20x10 y Excepciones Dinámicas
+                Gestión de Turnos, Proyección 30x10 y Excepciones Dinámicas
               </span>
             </div>
           </div>
@@ -142,7 +142,7 @@ const AppContent: React.FC = () => {
               Acceso Restringido al Personal Autorizado
             </h2>
             <p className="text-sm text-slate-500 max-w-md mb-6 leading-relaxed">
-              La planilla de turnos 20x10 y saldos de descansos de Mina contiene información confidencial de las operaciones de taller. Por favor inicia sesión con tu cuenta de supervisor o administrador para continuar.
+              La planilla de turnos 30x10 y saldos de descansos de Mina contiene información confidencial de las operaciones de taller. Por favor inicia sesión con tu cuenta de supervisor o administrador para continuar.
             </p>
             <button
               onClick={() => setAuthModalOpen(true)}
@@ -161,7 +161,7 @@ const AppContent: React.FC = () => {
                   <Layers className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-xs font-bold tracking-tight">PROGRAMACIÓN TALLER MINA (RÉGIMEN ATÍPICO 20x10)</h2>
+                  <h2 className="text-xs font-bold tracking-tight">PROGRAMACIÓN TALLER MINA (RÉGIMEN ATÍPICO 30x10)</h2>
                   <p className="text-[11px] text-slate-400">
                     Las fechas base son inmutables. Haz clic sobre cualquier día para vender o registrar permisos en bloque (1 a 5 días).
                   </p>
@@ -223,7 +223,7 @@ const AppContent: React.FC = () => {
           {/* Separador */}
           <div className="w-[1px] h-5 bg-slate-800"></div>
 
-          {/* Botón Planilla Mensual 20x10 */}
+          {/* Botón Planilla Mensual 30x10 */}
           <button
             onClick={() => setVistaActiva('planilla')}
             className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all ${
@@ -233,7 +233,7 @@ const AppContent: React.FC = () => {
             }`}
           >
             <CalendarDays className="w-4 h-4" />
-            <span>Planilla 20x10</span>
+            <span>Planilla 30x10</span>
           </button>
         </nav>
       )}

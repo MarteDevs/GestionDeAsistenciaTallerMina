@@ -180,7 +180,7 @@ fun DetalleTrabajadorScreen(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Turno Atípico 20x10 • ${trabajador.area.ifBlank { "Taller Mina" }}",
+                            text = "Turno Atípico 30x10 • ${trabajador.area.ifBlank { "Taller Mina" }}",
                             fontSize = 12.sp,
                             color = Slate400,
                             fontWeight = FontWeight.Medium
@@ -201,7 +201,7 @@ fun DetalleTrabajadorScreen(
                     Button(
                         onClick = {
                             if (selectedFechas.size > 5) {
-                                scope.launch { snackbarHostState.showSnackbar("Régimen 20x10: Máximo 5 días de venta por ciclo.") }
+                                scope.launch { snackbarHostState.showSnackbar("Régimen 30x10: Máximo 5 días de venta por ciclo.") }
                                 return@Button
                             }
                             scope.launch {
@@ -470,7 +470,7 @@ fun DetalleTrabajadorScreen(
                                     selectedFechas = selectedFechas - diaIso
                                 } else {
                                     if (selectedFechas.size >= 5) {
-                                        scope.launch { snackbarHostState.showSnackbar("Régimen 20x10: Solo se permite vender hasta 5 días por ciclo.") }
+                                        scope.launch { snackbarHostState.showSnackbar("Régimen 30x10: Solo se permite vender hasta 5 días por ciclo.") }
                                     } else {
                                         selectedFechas = selectedFechas + diaIso
                                     }
@@ -505,7 +505,7 @@ fun DetalleTrabajadorScreen(
                                         if (yaVendida) return@Checkbox
                                         if (check) {
                                             if (selectedFechas.size >= 5) {
-                                                scope.launch { snackbarHostState.showSnackbar("Régimen 20x10: Solo se permite vender hasta 5 días por ciclo.") }
+                                                scope.launch { snackbarHostState.showSnackbar("Régimen 30x10: Solo se permite vender hasta 5 días por ciclo.") }
                                             } else {
                                                 selectedFechas = selectedFechas + diaIso
                                             }

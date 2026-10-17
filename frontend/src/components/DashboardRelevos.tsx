@@ -145,7 +145,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
                 PANEL DE RELEVOS Y OPERACIONES DIARIAS
               </h2>
               <p className="text-[11px] text-slate-500">
-                Monitoreo activo del régimen 20x10, rotación de guardias y ventas de descanso
+                Monitoreo activo del régimen 30x10, rotación de guardias y ventas de descanso
               </p>
             </div>
           </div>
