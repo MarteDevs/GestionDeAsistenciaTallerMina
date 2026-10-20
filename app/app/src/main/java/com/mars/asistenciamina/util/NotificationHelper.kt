@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.mars.asistenciamina.MainActivity
+import com.mars.asistenciamina.data.local.SessionManager
 import com.mars.asistenciamina.data.models.EventoNotificacionDto
 
 object NotificationHelper {
@@ -131,6 +132,9 @@ object NotificationHelper {
      */
     fun notifyUpcomingShifts(context: Context, eventos: List<EventoNotificacionDto>) {
         if (!hasNotificationPermission(context) || eventos.isEmpty()) return
+
+        SessionManager.init(context)
+        SessionManager.registrarAlertaSonada()
 
         // 1. EVENTOS DE HOY (Día 0 - MÁXIMA PRIORIDAD Y SONIDO ESPECIAL)
         val salidasHoy = eventos.filter { it.diasRestantes == 0 && it.tipo == "INICIO_DESCANSO" }

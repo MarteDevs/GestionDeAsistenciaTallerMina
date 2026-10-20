@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.res.painterResource
 import com.mars.asistenciamina.R
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,18 +31,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.FlightTakeoff
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -64,6 +72,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -113,6 +122,9 @@ fun HomeScreen(
     val usuarioActual = remember { SessionManager.getUser() }
     var yaNotificado by rememberSaveable { mutableStateOf(false) }
     var showConfigModal by rememberSaveable { mutableStateOf(false) }
+    var showNotificationsModal by rememberSaveable { mutableStateOf(false) }
+    var descartadasIds by remember { mutableStateOf(SessionManager.getDescartadasIds()) }
+    var ultimaAlertaSonadaTimestamp by remember { mutableStateOf(SessionManager.getUltimaAlertaSonadaTimestamp()) }
 
     // Auto-recarga automática al iniciar o cuando entra en foco la pantalla
     LaunchedEffect(Unit) {
@@ -175,36 +187,36 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    val eventosSuccess = (state as? HomeUiState.Success)?.eventos ?: emptyList()
+                    val notificacionesActivas = remember(eventosSuccess, descartadasIds) {
+                        eventosSuccess.filter { it.id !in descartadasIds }
+                    }
+                    val totalAlertasPendientes = notificacionesActivas.size
+
                     // Botón de notificaciones push de relevos
                     IconButton(
-                        onClick = {
-                            if (state is HomeUiState.Success) {
-                                val eventos = (state as HomeUiState.Success).eventos
-                                NotificationHelper.notifyUpcomingShifts(context, eventos)
-                            }
-                        },
+                        onClick = { showNotificationsModal = true },
                         modifier = Modifier.size(44.dp)
                     ) {
                         Box(contentAlignment = Alignment.TopEnd) {
                             Icon(
-                                imageVector = Icons.Default.NotificationsActive,
-                                contentDescription = "Enviar Notificación Push",
-                                tint = Amber400,
+                                imageVector = if (totalAlertasPendientes > 0) Icons.Default.NotificationsActive else Icons.Default.Notifications,
+                                contentDescription = "Ver Notificaciones de Relevo",
+                                tint = if (totalAlertasPendientes > 0) Amber400 else Slate400,
                                 modifier = Modifier.size(24.dp)
                             )
-                            val totalAlertas = (state as? HomeUiState.Success)?.resumen?.total ?: 0
-                            if (totalAlertas > 0) {
+                            if (totalAlertasPendientes > 0) {
                                 Box(
                                     modifier = Modifier
-                                        .size(16.dp)
+                                        .size(17.dp)
                                         .clip(CircleShape)
                                         .background(Rose500),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = if (totalAlertas > 9) "9+" else totalAlertas.toString(),
+                                        text = if (totalAlertasPendientes > 9) "9+" else totalAlertasPendientes.toString(),
                                         color = Color.White,
-                                        fontSize = 9.sp,
+                                        fontSize = 9.5.sp,
                                         fontWeight = FontWeight.Black
                                     )
                                 }
@@ -567,6 +579,53 @@ fun HomeScreen(
             )
         }
     }
+
+    // Modal Bottom Sheet de Centro de Notificaciones
+    if (showNotificationsModal) {
+        val notifSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val eventos = (state as? HomeUiState.Success)?.eventos ?: emptyList()
+        ModalBottomSheet(
+            onDismissRequest = { showNotificationsModal = false },
+            sheetState = notifSheetState,
+            containerColor = Slate900,
+            contentColor = Color.White,
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 12.dp)
+                        .size(width = 44.dp, height = 4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Slate700)
+                )
+            }
+        ) {
+            NotificacionesSheetContent(
+                eventos = eventos,
+                descartadasIds = descartadasIds,
+                onDescartarTodas = {
+                    val allIds = eventos.map { it.id }
+                    SessionManager.descartarNotificaciones(allIds)
+                    descartadasIds = SessionManager.getDescartadasIds()
+                },
+                onDescartarUna = { id ->
+                    SessionManager.descartarNotificacion(id)
+                    descartadasIds = SessionManager.getDescartadasIds()
+                },
+                onRestaurarTodas = {
+                    SessionManager.restaurarNotificaciones()
+                    descartadasIds = emptySet()
+                },
+                onHacerSonarAlertas = {
+                    NotificationHelper.notifyUpcomingShifts(context, eventos)
+                    // Las alertas que acaban de sonar se restauran para que se mantengan visibles
+                    SessionManager.restaurarNotificaciones()
+                    descartadasIds = emptySet()
+                    ultimaAlertaSonadaTimestamp = SessionManager.getUltimaAlertaSonadaTimestamp()
+                },
+                onClose = { showNotificationsModal = false }
+            )
+        }
+    }
 }
 
 @Composable
@@ -831,6 +890,498 @@ fun ConfiguracionSheetContent(
                 fontWeight = FontWeight.Bold,
                 color = Rose500
             )
+        }
+    }
+}
+
+@Composable
+fun NotificacionesSheetContent(
+    eventos: List<EventoNotificacionDto>,
+    descartadasIds: Set<String>,
+    onDescartarTodas: () -> Unit,
+    onDescartarUna: (String) -> Unit,
+    onRestaurarTodas: () -> Unit,
+    onHacerSonarAlertas: () -> Unit,
+    onClose: () -> Unit
+) {
+    val notificacionesActivas = remember(eventos, descartadasIds) {
+        eventos.filter { it.id !in descartadasIds }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .padding(bottom = 28.dp)
+    ) {
+        // Encabezado Superior: Ícono, Título y Botones de Acción
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Amber500.copy(alpha = 0.15f))
+                        .border(1.dp, Amber500.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NotificationsActive,
+                        contentDescription = null,
+                        tint = Amber400,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Centro de Alertas",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
+                    )
+                    Text(
+                        text = if (notificacionesActivas.isNotEmpty())
+                            "${notificacionesActivas.size} alerta(s) de relevo"
+                        else
+                            "Bandeja limpia",
+                        fontSize = 12.sp,
+                        color = if (notificacionesActivas.isNotEmpty()) Amber400 else Emerald500,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            // Acciones a la derecha: Limpiar / Restaurar y Cerrar
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (notificacionesActivas.isNotEmpty()) {
+                    Button(
+                        onClick = onDescartarTodas,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Rose500.copy(alpha = 0.15f),
+                            contentColor = Rose500
+                        ),
+                        border = BorderStroke(1.dp, Rose500.copy(alpha = 0.35f)),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DoneAll,
+                            contentDescription = null,
+                            tint = Rose500,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Limpiar",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Rose500
+                        )
+                    }
+                } else if (eventos.isNotEmpty()) {
+                    Button(
+                        onClick = onRestaurarTodas,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Slate800,
+                            contentColor = Slate300
+                        ),
+                        border = BorderStroke(1.dp, Slate700),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.RestartAlt,
+                            contentDescription = null,
+                            tint = Slate300,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Restaurar",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Slate300
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cerrar",
+                        tint = Slate400,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Slate800)
+
+        // Banner para hacer sonar alertas de relevo manualmente
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = Slate950),
+            border = BorderStroke(1.dp, Slate800)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VolumeUp,
+                        contentDescription = null,
+                        tint = Amber400,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "Alertas de Relevos Programadas",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Sonido prioritario en Día 0 y avisos a 1 y 2 días",
+                            fontSize = 11.sp,
+                            color = Slate400
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = onHacerSonarAlertas,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Amber500.copy(alpha = 0.18f),
+                        contentColor = Amber400
+                    ),
+                    border = BorderStroke(1.dp, Amber500.copy(alpha = 0.4f)),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Text(
+                        text = "Hacer Sonar",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Amber400
+                    )
+                }
+            }
+        }
+
+        // Lista de Notificaciones o Estado Vacío ("Bandeja Limpia")
+        if (notificacionesActivas.isEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Slate950),
+                border = BorderStroke(1.dp, Slate800)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 28.dp, horizontal = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(Emerald500.copy(alpha = 0.15f))
+                            .border(1.dp, Emerald500.copy(alpha = 0.35f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Emerald500,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = "¡Bandeja de Alertas Limpia!",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Has limpiado las alertas pendientes. Cuando suene una nueva notificación programada o un relevo del día, aparecerá aquí automáticamente.",
+                        fontSize = 12.sp,
+                        color = Slate400,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 16.sp
+                    )
+                    if (eventos.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(
+                            onClick = onRestaurarTodas,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Slate700)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RestartAlt,
+                                contentDescription = null,
+                                tint = Slate300,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Restaurar alertas archivadas",
+                                fontSize = 12.sp,
+                                color = Slate300,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(notificacionesActivas, key = { it.id }) { notif ->
+                    ItemNotificacionSheet(
+                        evento = notif,
+                        onDescartar = { onDescartarUna(notif.id) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ItemNotificacionSheet(
+    evento: EventoNotificacionDto,
+    onDescartar: () -> Unit
+) {
+    val esEnDescanso = evento.tipo == "EN_DESCANSO" || evento.tipo == "FIN_DESCANSO"
+    val esPorBajar = evento.tipo == "INICIO_DESCANSO"
+    val esVenta = evento.tipo == "VENTA_ACTIVA"
+
+    val badgeColor = when {
+        esEnDescanso -> Violet500
+        esPorBajar -> Amber400
+        esVenta -> Emerald500
+        else -> Rose500
+    }
+
+    val badgeLabel = when {
+        esEnDescanso -> "Retorno a Mina"
+        esPorBajar -> "Salida a Descanso"
+        esVenta -> "Venta de Descanso"
+        else -> "Permiso Especial"
+    }
+
+    val iconVector = when {
+        esEnDescanso -> Icons.Default.Bedtime
+        esPorBajar -> Icons.Default.FlightTakeoff
+        esVenta -> Icons.Default.Paid
+        else -> Icons.Default.Assignment
+    }
+
+    val fechaLegible = remember(evento.fecha) {
+        formatearFechaEspanol(evento.fecha)
+    }
+
+    val descLimpia = remember(evento.descripcion, evento.trabajadorNombre) {
+        limpiarDescripcion(evento.descripcion, evento.trabajadorNombre)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Slate950),
+        border = BorderStroke(1.dp, Slate800)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            // Fila 1: Badge de Tipo + Contador de Días + Botón Descartar (X)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(badgeColor.copy(alpha = 0.16f))
+                        .border(1.dp, badgeColor.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = iconVector,
+                            contentDescription = null,
+                            tint = badgeColor,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = badgeLabel.uppercase(),
+                            color = badgeColor,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.4.sp
+                        )
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (evento.esHoy) Rose500.copy(alpha = 0.2f)
+                                else Slate800
+                            )
+                            .border(
+                                1.dp,
+                                if (evento.esHoy) Rose500.copy(alpha = 0.6f) else Slate700,
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = when {
+                                evento.esHoy -> "¡HOY!"
+                                esEnDescanso -> "Quedan ${evento.diasRestantes}d"
+                                esPorBajar -> "Baja en ${evento.diasRestantes}d"
+                                else -> "En ${evento.diasRestantes}d"
+                            },
+                            color = if (evento.esHoy) Rose500 else Slate300,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    IconButton(
+                        onClick = onDescartar,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Descartar alerta",
+                            tint = Slate400,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Fila 2: Nombre de colaborador y área
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = evento.trabajadorNombre,
+                    color = Color.White,
+                    fontSize = 14.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Slate900)
+                        .border(1.dp, Slate800, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = evento.area,
+                        color = Slate400,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Fila 3: Descripción detallada del relevo
+            Text(
+                text = descLimpia,
+                color = Slate300,
+                fontSize = 12.sp,
+                lineHeight = 16.sp
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Fila 4: Fecha en español y alerta especial
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "📅 $fechaLegible",
+                    color = Slate400,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+
+                if (evento.esHoy) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Rose500.copy(alpha = 0.15f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "🔔 Alerta de Hoy",
+                            color = Rose500,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
     }
 }

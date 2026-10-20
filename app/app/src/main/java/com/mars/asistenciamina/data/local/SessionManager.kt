@@ -23,6 +23,10 @@ object SessionManager {
     private const val KEY_CACHE_TRABAJADORES = "cache_trabajadores"
     private const val KEY_CACHE_TIMESTAMP = "cache_timestamp"
 
+    // Notificaciones leídas / descartadas
+    private const val KEY_NOTIFICACIONES_DESCARTADAS = "notificaciones_descartadas_ids"
+    private const val KEY_ULTIMA_ALERTA_SONADA = "notificaciones_ultima_alerta_sonada"
+
     private var prefs: SharedPreferences? = null
 
     private val json = Json {
@@ -122,5 +126,47 @@ object SessionManager {
 
     fun getCacheTimestamp(): Long {
         return prefs?.getLong(KEY_CACHE_TIMESTAMP, 0L) ?: 0L
+    }
+
+    // --- MÉTODOS DE GESTIÓN DE NOTIFICACIONES ---
+
+    fun getDescartadasIds(): Set<String> {
+        return prefs?.getStringSet(KEY_NOTIFICACIONES_DESCARTADAS, emptySet()) ?: emptySet()
+    }
+
+    fun descartarNotificaciones(ids: Collection<String>) {
+        val current = getDescartadasIds().toMutableSet()
+        current.addAll(ids)
+        prefs?.edit()?.apply {
+            putStringSet(KEY_NOTIFICACIONES_DESCARTADAS, current)
+            apply()
+        }
+    }
+
+    fun descartarNotificacion(id: String) {
+        val current = getDescartadasIds().toMutableSet()
+        current.add(id)
+        prefs?.edit()?.apply {
+            putStringSet(KEY_NOTIFICACIONES_DESCARTADAS, current)
+            apply()
+        }
+    }
+
+    fun restaurarNotificaciones() {
+        prefs?.edit()?.apply {
+            remove(KEY_NOTIFICACIONES_DESCARTADAS)
+            apply()
+        }
+    }
+
+    fun registrarAlertaSonada() {
+        prefs?.edit()?.apply {
+            putLong(KEY_ULTIMA_ALERTA_SONADA, System.currentTimeMillis())
+            apply()
+        }
+    }
+
+    fun getUltimaAlertaSonadaTimestamp(): Long {
+        return prefs?.getLong(KEY_ULTIMA_ALERTA_SONADA, 0L) ?: 0L
     }
 }
