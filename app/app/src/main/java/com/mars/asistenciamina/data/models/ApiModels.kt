@@ -32,7 +32,20 @@ data class ProximosTurnosResponse(
     val fechaReferencia: String = "",
     val diasVentana: Int = 7,
     @SerialName("estadisticas") val resumen: ResumenNotificacionesDto = ResumenNotificacionesDto(),
+    val descartadas: List<String> = emptyList(),
     @SerialName("data") val eventos: List<EventoNotificacionDto> = emptyList()
+)
+
+@Serializable
+data class DescartarNotificacionesRequest(
+    val ids: List<String>? = null,
+    val id: String? = null
+)
+
+@Serializable
+data class GenericApiResponse(
+    val success: Boolean = true,
+    val message: String? = null
 )
 
 @Serializable

@@ -123,7 +123,7 @@ fun HomeScreen(
     var yaNotificado by rememberSaveable { mutableStateOf(false) }
     var showConfigModal by rememberSaveable { mutableStateOf(false) }
     var showNotificationsModal by rememberSaveable { mutableStateOf(false) }
-    var descartadasIds by remember { mutableStateOf(SessionManager.getDescartadasIds()) }
+    val descartadasIds = (state as? HomeUiState.Success)?.descartadas ?: SessionManager.getDescartadasIds()
     var ultimaAlertaSonadaTimestamp by remember { mutableStateOf(SessionManager.getUltimaAlertaSonadaTimestamp()) }
 
     // Auto-recarga automática al iniciar o cuando entra en foco la pantalla
@@ -604,22 +604,18 @@ fun HomeScreen(
                 descartadasIds = descartadasIds,
                 onDescartarTodas = {
                     val allIds = eventos.map { it.id }
-                    SessionManager.descartarNotificaciones(allIds)
-                    descartadasIds = SessionManager.getDescartadasIds()
+                    viewModel.descartarNotificaciones(allIds)
                 },
                 onDescartarUna = { id ->
-                    SessionManager.descartarNotificacion(id)
-                    descartadasIds = SessionManager.getDescartadasIds()
+                    viewModel.descartarNotificacion(id)
                 },
                 onRestaurarTodas = {
-                    SessionManager.restaurarNotificaciones()
-                    descartadasIds = emptySet()
+                    viewModel.restaurarNotificaciones()
                 },
                 onHacerSonarAlertas = {
                     NotificationHelper.notifyUpcomingShifts(context, eventos)
                     // Las alertas que acaban de sonar se restauran para que se mantengan visibles
-                    SessionManager.restaurarNotificaciones()
-                    descartadasIds = emptySet()
+                    viewModel.restaurarNotificaciones()
                     ultimaAlertaSonadaTimestamp = SessionManager.getUltimaAlertaSonadaTimestamp()
                 },
                 onClose = { showNotificationsModal = false }

@@ -1,5 +1,7 @@
 package com.mars.asistenciamina.data.api
 
+import com.mars.asistenciamina.data.models.DescartarNotificacionesRequest
+import com.mars.asistenciamina.data.models.GenericApiResponse
 import com.mars.asistenciamina.data.models.ExcepcionRangoRequest
 import com.mars.asistenciamina.data.models.ExcepcionRangoResponse
 import com.mars.asistenciamina.data.models.GrillaResponse
@@ -40,4 +42,12 @@ interface AsistenciaApiService {
     suspend fun registrarExcepcionRango(
         @Body request: ExcepcionRangoRequest
     ): ExcepcionRangoResponse
+
+    @POST("notificaciones/descartar")
+    suspend fun descartarNotificaciones(
+        @Body request: DescartarNotificacionesRequest
+    ): GenericApiResponse
+
+    @POST("notificaciones/restaurar")
+    suspend fun restaurarNotificaciones(): GenericApiResponse
 }

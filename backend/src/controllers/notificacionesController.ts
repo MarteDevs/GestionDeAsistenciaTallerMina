@@ -189,6 +189,18 @@ export class NotificacionesController {
       // Ordenar cronológicamente por días restantes y nombre
       eventos.sort((a, b) => a.diasRestantes - b.diasRestantes || a.nombres.localeCompare(b.nombres));
 
+      // Obtener lista de notificaciones descartadas para el usuario actual
+      let descartadas: string[] = [];
+      const usuarioId = req.usuario?.id;
+      if (usuarioId) {
+        await NotificacionesController.asegurarTablaDescartadas();
+        const rows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT notificacion_id FROM notificaciones_descartadas WHERE usuario_id = ?`,
+          usuarioId
+        );
+        descartadas = rows.map((r: any) => r.notificacion_id);
+      }
+
       // Estadísticas rápidas para badges
       const estadisticas = {
         totalEventos: eventos.length,
@@ -204,10 +216,93 @@ export class NotificacionesController {
         fechaReferencia: fechaHoyStr,
         diasVentana,
         estadisticas,
+        descartadas,
         data: eventos,
       });
     } catch (error: any) {
       console.error('Error al obtener notificaciones de turnos próximos:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Garantiza que la tabla de notificaciones descartadas exista en MySQL
+   */
+  private static async asegurarTablaDescartadas(): Promise<void> {
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS notificaciones_descartadas (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          usuario_id INT NOT NULL,
+          notificacion_id VARCHAR(150) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY uq_user_notif (usuario_id, notificacion_id),
+          INDEX idx_user (usuario_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+    } catch (e) {
+      console.error('Error al asegurar tabla notificaciones_descartadas:', e);
+    }
+  }
+
+  /**
+   * POST /api/notificaciones/descartar
+   * Body: { ids?: string[], id?: string }
+   */
+  public static async descartarNotificaciones(req: Request, res: Response): Promise<void> {
+    try {
+      const usuarioId = req.usuario?.id;
+      if (!usuarioId) {
+        res.status(401).json({ success: false, error: 'Usuario no identificado' });
+        return;
+      }
+
+      await NotificacionesController.asegurarTablaDescartadas();
+
+      const { ids, id } = req.body;
+      const idsADescartar: string[] = Array.isArray(ids) ? ids : id ? [id] : [];
+
+      if (idsADescartar.length === 0) {
+        res.json({ success: true, descartadasCount: 0 });
+        return;
+      }
+
+      for (const notifId of idsADescartar) {
+        await prisma.$executeRawUnsafe(
+          `INSERT IGNORE INTO notificaciones_descartadas (usuario_id, notificacion_id) VALUES (?, ?)`,
+          usuarioId,
+          notifId
+        );
+      }
+
+      res.json({ success: true, descartadasCount: idsADescartar.length });
+    } catch (error: any) {
+      console.error('Error descartando notificaciones:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * POST /api/notificaciones/restaurar
+   * Limpia las notificaciones descartadas para el usuario actual
+   */
+  public static async restaurarNotificaciones(req: Request, res: Response): Promise<void> {
+    try {
+      const usuarioId = req.usuario?.id;
+      if (!usuarioId) {
+        res.status(401).json({ success: false, error: 'Usuario no identificado' });
+        return;
+      }
+
+      await NotificacionesController.asegurarTablaDescartadas();
+      await prisma.$executeRawUnsafe(
+        `DELETE FROM notificaciones_descartadas WHERE usuario_id = ?`,
+        usuarioId
+      );
+
+      res.json({ success: true, message: 'Notificaciones restauradas exitosamente' });
+    } catch (error: any) {
+      console.error('Error restaurando notificaciones:', error);
       res.status(500).json({ success: false, error: error.message });
     }
   }

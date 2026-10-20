@@ -45,6 +45,8 @@ app.put('/api/admin/usuarios/:id/estado', authMiddleware, requireAdmin, AdminCon
 
 // 5. Notificaciones y Próximos Turnos (Web & Android)
 app.get('/api/notificaciones/proximos-turnos', authMiddleware, NotificacionesController.obtenerProximosTurnos);
+app.post('/api/notificaciones/descartar', authMiddleware, NotificacionesController.descartarNotificaciones);
+app.post('/api/notificaciones/restaurar', authMiddleware, NotificacionesController.restaurarNotificaciones);
 
 // Health check
 app.get('/api/health', (_req, res) => {
