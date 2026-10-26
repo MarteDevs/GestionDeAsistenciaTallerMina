@@ -5,7 +5,7 @@ export interface Usuario {
   email: string;
   username?: string | null;
   nombres: string;
-  rol: 'ADMIN' | 'SUPERVISOR' | 'TRABAJADOR';
+  rol: 'ADMIN' | 'SUPERVISOR' | 'SECRETARIA' | 'TRABAJADOR';
 }
 
 interface AuthContextType {

@@ -15,6 +15,7 @@ enum TipoExcepcion {
 enum RolUsuario {
   ADMIN
   SUPERVISOR
+  SECRETARIA
   TRABAJADOR
 }
 

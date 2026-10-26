@@ -13,6 +13,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [identificador, setIdentificador] = useState('');
   const [password, setPassword] = useState('');
   const [nombres, setNombres] = useState('');
+  const [rolSolicitado, setRolSolicitado] = useState<'SECRETARIA' | 'SUPERVISOR'>('SECRETARIA');
   const [loading, setLoading] = useState(false);
   const [mensajeInfo, setMensajeInfo] = useState<string | null>(null);
   const [mensajeError, setMensajeError] = useState<string | null>(null);
@@ -28,7 +29,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     try {
       const endpoint = esRegistro ? '/api/auth/registro' : '/api/auth/login';
       const payload = esRegistro
-        ? { email: identificador.trim(), password, nombres: nombres.trim() }
+        ? { email: identificador.trim(), password, nombres: nombres.trim(), rol: rolSolicitado }
         : { identificador: identificador.trim(), email: identificador.trim(), password };
 
       const res = await fetch(endpoint, {
@@ -101,19 +102,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           )}
 
           {esRegistro && (
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                Nombres y Apellidos
-              </label>
-              <input
-                type="text"
-                required
-                value={nombres}
-                onChange={(e) => setNombres(e.target.value)}
-                placeholder="Ej. Juan Pérez"
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition"
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                  Nombres y Apellidos
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={nombres}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNombres(val);
+                    if (val.toLowerCase().includes('secretaria') || val.toLowerCase().includes('asistente')) {
+                      setRolSolicitado('SECRETARIA');
+                    }
+                  }}
+                  placeholder="Ej. Secretaria o Juan Pérez"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                  Rol Solicitado
+                </label>
+                <select
+                  value={rolSolicitado}
+                  onChange={(e) => setRolSolicitado(e.target.value as any)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 bg-white focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition"
+                >
+                  <option value="SECRETARIA">Secretaría / Asistente (Solo Visualización & Reportes)</option>
+                  <option value="SUPERVISOR">Supervisor de Turno Mina</option>
+                </select>
+              </div>
+            </>
           )}
 
           <div>

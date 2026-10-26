@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
+import { useAuth } from '../context/AuthContext';
 import { ModalExcepcion } from './ModalExcepcion';
 import {
   Calendar as CalendarIcon,
@@ -78,6 +79,9 @@ const obtenerFechaHoyPeru = () => {
 };
 
 export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshTrigger = 0 }) => {
+  const { usuario } = useAuth();
+  const esSoloLectura = usuario?.rol === 'SECRETARIA' || usuario?.rol === 'TRABAJADOR';
+
   const hoyPeru = React.useMemo(() => obtenerFechaHoyPeru(), []);
   const [anio, setAnio] = useState<number>(() => {
     return hoyPeru.anio >= 2026 ? hoyPeru.anio : 2026;
@@ -157,6 +161,7 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
     trabajadorNombre: string,
     dia: DiaCalculado
   ) => {
+    if (esSoloLectura) return;
     setModalState({
       isOpen: true,
       trabajadorId,
@@ -594,14 +599,16 @@ export const GrillaProgramacion: React.FC<GrillaProgramacionProps> = ({ refreshT
                             onMouseEnter={() => setHoveredFecha(dia.fecha)}
                             onMouseLeave={() => setHoveredFecha(null)}
                             onClick={() =>
-                              handleCellClick(fila.trabajadorId, fila.nombres, dia)
+                              !esSoloLectura && handleCellClick(fila.trabajadorId, fila.nombres, dia)
                             }
                             title={`${fila.nombres} - ${dia.fecha}${
                               isToday ? ' (HOY)' : ''
                             }\nEstado: ${dia.estado}${
                               dia.motivoExcepcion ? `\nMotivo: ${dia.motivoExcepcion}` : ''
-                            }\n(Clic para vender o aplicar permiso)`}
-                            className={`cursor-pointer p-0.5 transition-all duration-75 text-center w-[32px] min-w-[32px] max-w-[32px] h-9 ${
+                            }${!esSoloLectura ? '\n(Clic para vender o aplicar permiso)' : ''}`}
+                            className={`${
+                              esSoloLectura ? 'cursor-default' : 'cursor-pointer'
+                            } p-0.5 transition-all duration-75 text-center w-[32px] min-w-[32px] max-w-[32px] h-9 ${
                               isToday
                                 ? 'border-x-2 border-amber-400/90 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.2)]'
                                 : 'border-r border-slate-100'

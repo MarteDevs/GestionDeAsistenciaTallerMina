@@ -39,13 +39,27 @@ export class AuthController {
 
       const passwordHash = await bcrypt.hash(password, 10);
 
+      // Determinar rol asignado: si se solicita explícitamente o si el nombre/email indica secretaria/asistente
+      let rolAsignado: RolUsuario = RolUsuario.SUPERVISOR;
+      const rolSolicitado = req.body.rol;
+      if (rolSolicitado && Object.values(RolUsuario).includes(rolSolicitado)) {
+        rolAsignado = rolSolicitado as RolUsuario;
+      } else if (
+        nombres.toLowerCase().includes('secretaria') ||
+        nombres.toLowerCase().includes('asistente') ||
+        emailNormalizado.includes('secretaria') ||
+        emailNormalizado.includes('asistente')
+      ) {
+        rolAsignado = RolUsuario.SECRETARIA;
+      }
+
       const nuevoUsuario = await prisma.usuario.create({
         data: {
           email: emailNormalizado,
           username: usernameNormalizado,
           password: passwordHash,
           nombres: nombres.trim(),
-          rol: RolUsuario.SUPERVISOR,
+          rol: rolAsignado,
           estado: EstadoUsuario.PENDIENTE,
         },
         select: {

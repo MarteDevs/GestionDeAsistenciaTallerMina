@@ -34,10 +34,26 @@ export class AdminController {
       const id = parseInt(req.params.id);
       const { estado, rol } = req.body;
 
-      if (!id || !estado || !Object.values(EstadoUsuario).includes(estado)) {
+      if (!id || (!estado && !rol)) {
         res.status(400).json({
           success: false,
-          error: 'Parámetros inválidos. Se requiere un estado válido (ACTIVO, PENDIENTE, RECHAZADO).',
+          error: 'Parámetros inválidos. Se requiere estado o rol.',
+        });
+        return;
+      }
+
+      if (estado && !Object.values(EstadoUsuario).includes(estado)) {
+        res.status(400).json({
+          success: false,
+          error: 'Estado inválido (ACTIVO, PENDIENTE, RECHAZADO).',
+        });
+        return;
+      }
+
+      if (rol && !Object.values(RolUsuario).includes(rol)) {
+        res.status(400).json({
+          success: false,
+          error: 'Rol inválido (ADMIN, SUPERVISOR, SECRETARIA, TRABAJADOR).',
         });
         return;
       }
@@ -45,9 +61,9 @@ export class AdminController {
       const usuarioActualizado = await prisma.usuario.update({
         where: { id },
         data: {
-          estado,
-          ...(rol && Object.values(RolUsuario).includes(rol) ? { rol } : {}),
-          aprobadoEn: estado === EstadoUsuario.ACTIVO ? new Date() : null,
+          ...(estado ? { estado } : {}),
+          ...(rol ? { rol } : {}),
+          ...(estado === EstadoUsuario.ACTIVO ? { aprobadoEn: new Date() } : {}),
         },
         select: {
           id: true,
@@ -63,10 +79,10 @@ export class AdminController {
       res.json({
         success: true,
         data: usuarioActualizado,
-        message: `Usuario ${estado === EstadoUsuario.ACTIVO ? 'aprobado' : estado.toLowerCase()} correctamente.`,
+        message: 'Usuario actualizado correctamente.',
       });
     } catch (error: any) {
-      console.error('Error al cambiar estado de usuario:', error);
+      console.error('Error al cambiar estado o rol de usuario:', error);
       res.status(500).json({ success: false, error: error.message });
     }
   }

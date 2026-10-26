@@ -8,7 +8,7 @@ export interface AuthUserPayload {
   email: string;
   username?: string | null;
   nombres: string;
-  rol: 'ADMIN' | 'SUPERVISOR' | 'TRABAJADOR';
+  rol: 'ADMIN' | 'SUPERVISOR' | 'SECRETARIA' | 'TRABAJADOR';
   estado: 'PENDIENTE' | 'ACTIVO' | 'RECHAZADO';
 }
 
@@ -74,6 +74,17 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction): v
     res.status(403).json({
       success: false,
       error: 'Acceso restringido: Se requieren permisos de Administrador.',
+    });
+    return;
+  }
+  next();
+};
+
+export const requireSupervisorOrAdmin = (req: Request, res: Response, next: NextFunction): void => {
+  if (!req.usuario || (req.usuario.rol !== 'ADMIN' && req.usuario.rol !== 'SUPERVISOR')) {
+    res.status(403).json({
+      success: false,
+      error: 'Acceso restringido: El rol de Secretaría / Asistente tiene permisos de solo visualización y exportación de reportes.',
     });
     return;
   }

@@ -9,7 +9,7 @@ import { AuthController } from './controllers/authController';
 import { AdminController } from './controllers/adminController';
 import { TrabajadorController } from './controllers/trabajadorController';
 import { NotificacionesController } from './controllers/notificacionesController';
-import { authMiddleware, requireAdmin } from './middlewares/authMiddleware';
+import { authMiddleware, requireAdmin, requireSupervisorOrAdmin } from './middlewares/authMiddleware';
 
 getDatabaseUrl();
 
@@ -28,10 +28,10 @@ app.get('/api/auth/perfil', authMiddleware, AuthController.perfil);
 // 2. Programación y Excepciones
 app.get('/api/programacion', ProgramacionController.getGrilla);
 app.get('/api/programacion/bloque-descanso', ProgramacionController.getDetalleBloqueDescanso);
-app.post('/api/excepciones', authMiddleware, ProgramacionController.crearExcepcion);
-app.put('/api/excepciones', authMiddleware, ProgramacionController.actualizarExcepcion);
-app.post('/api/excepciones/rango', authMiddleware, TrabajadorController.registrarExcepcionesRango);
-app.delete('/api/excepciones', authMiddleware, ProgramacionController.eliminarExcepcion);
+app.post('/api/excepciones', authMiddleware, requireSupervisorOrAdmin, ProgramacionController.crearExcepcion);
+app.put('/api/excepciones', authMiddleware, requireSupervisorOrAdmin, ProgramacionController.actualizarExcepcion);
+app.post('/api/excepciones/rango', authMiddleware, requireSupervisorOrAdmin, TrabajadorController.registrarExcepcionesRango);
+app.delete('/api/excepciones', authMiddleware, requireSupervisorOrAdmin, ProgramacionController.eliminarExcepcion);
 
 // 3. Gestión de Trabajadores y Proyección 30x10
 app.get('/api/trabajadores', authMiddleware, TrabajadorController.listar);

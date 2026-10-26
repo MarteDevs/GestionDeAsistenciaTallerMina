@@ -7,7 +7,7 @@ interface UsuarioAdmin {
   email: string;
   username?: string | null;
   nombres: string;
-  rol: 'ADMIN' | 'SUPERVISOR' | 'TRABAJADOR';
+  rol: 'ADMIN' | 'SUPERVISOR' | 'SECRETARIA' | 'TRABAJADOR';
   estado: 'PENDIENTE' | 'ACTIVO' | 'RECHAZADO';
   createdAt: string;
 }
@@ -67,6 +67,31 @@ export const AdminUsuariosModal: React.FC<AdminUsuariosModalProps> = ({ isOpen, 
       }
     } catch (err) {
       console.error('Error al actualizar estado:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCambiarRol = async (id: number, nuevoRol: 'ADMIN' | 'SUPERVISOR' | 'SECRETARIA' | 'TRABAJADOR') => {
+    if (!token) return;
+    setActionLoading(id);
+    try {
+      const res = await fetch(`/api/admin/usuarios/${id}/estado`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ rol: nuevoRol }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUsuarios((prev) =>
+          prev.map((u) => (u.id === id ? { ...u, rol: nuevoRol } : u))
+        );
+      }
+    } catch (err) {
+      console.error('Error al actualizar rol:', err);
     } finally {
       setActionLoading(null);
     }
@@ -140,9 +165,17 @@ export const AdminUsuariosModal: React.FC<AdminUsuariosModalProps> = ({ isOpen, 
                         <div className="text-slate-500">{u.email}</div>
                       </td>
                       <td className="p-3">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">
-                          {u.rol}
-                        </span>
+                        <select
+                          value={u.rol}
+                          onChange={(e) => handleCambiarRol(u.id, e.target.value as any)}
+                          disabled={actionLoading === u.id}
+                          className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-bold text-slate-800 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-sm disabled:opacity-50"
+                        >
+                          <option value="SUPERVISOR">SUPERVISOR</option>
+                          <option value="SECRETARIA">SECRETARIA</option>
+                          <option value="ADMIN">ADMIN</option>
+                          <option value="TRABAJADOR">TRABAJADOR</option>
+                        </select>
                       </td>
                       <td className="p-3">
                         {u.estado === 'ACTIVO' && (

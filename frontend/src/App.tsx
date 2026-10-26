@@ -26,6 +26,13 @@ const AppContent: React.FC = () => {
   const [vistaActiva, setVistaActiva] = useState<'dashboard' | 'planilla'>('dashboard');
   const [conteoAlertasHoy, setConteoAlertasHoy] = useState<number>(0);
 
+  // Si el rol es SECRETARIA, fijar la vista directamente en planilla
+  useEffect(() => {
+    if (usuario?.rol === 'SECRETARIA') {
+      setVistaActiva('planilla');
+    }
+  }, [usuario]);
+
   // Consultar alertas críticas de hoy para el badge del dock
   useEffect(() => {
     if (!token || !isAuthenticated) return;
@@ -80,15 +87,17 @@ const AppContent: React.FC = () => {
                 {/* Notificaciones de Relevos / Turnos */}
                 <NotificationBell />
 
-                {/* Gestión de Personal */}
-                <button
-                  onClick={() => setGestionTrabajadoresOpen(true)}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs transition"
-                  title="Gestionar personal, altas, bajas y proyección 2027"
-                >
-                  <UserCog className="w-4 h-4 text-amber-400" />
-                  <span className="hidden sm:inline">Personal & Ciclos 20x10</span>
-                </button>
+                {/* Gestión de Personal (Solo Admin y Supervisor) */}
+                {usuario.rol !== 'SECRETARIA' && usuario.rol !== 'TRABAJADOR' && (
+                  <button
+                    onClick={() => setGestionTrabajadoresOpen(true)}
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs transition"
+                    title="Gestionar personal, altas, bajas y proyección 2027"
+                  >
+                    <UserCog className="w-4 h-4 text-amber-400" />
+                    <span className="hidden sm:inline">Personal & Ciclos 30x10</span>
+                  </button>
+                )}
 
                 {usuario.rol === 'ADMIN' && (
                   <button
@@ -163,22 +172,26 @@ const AppContent: React.FC = () => {
                 <div>
                   <h2 className="text-xs font-bold tracking-tight">PROGRAMACIÓN TALLER MINA (RÉGIMEN ATÍPICO 30x10)</h2>
                   <p className="text-[11px] text-slate-400">
-                    Las fechas base son inmutables. Haz clic sobre cualquier día para vender o registrar permisos en bloque (1 a 5 días).
+                    {usuario?.rol === 'SECRETARIA'
+                      ? 'Planilla oficial de turnos 30x10 y saldos de descansos. Vista oficial de consulta y exportación de reportes.'
+                      : 'Las fechas base son inmutables. Haz clic sobre cualquier día para vender o registrar permisos en bloque (1 a 5 días).'}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2 text-xs">
-                <button
-                  onClick={() => setGestionTrabajadoresOpen(true)}
-                  className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-semibold transition"
-                >
-                  + Gestionar Personal / Proyectar 2027
-                </button>
-              </div>
+              {usuario?.rol !== 'SECRETARIA' && usuario?.rol !== 'TRABAJADOR' && (
+                <div className="flex items-center space-x-2 text-xs">
+                  <button
+                    onClick={() => setGestionTrabajadoresOpen(true)}
+                    className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-semibold transition"
+                  >
+                    + Gestionar Personal / Proyectar 2027
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Vistas Alternables */}
-            {vistaActiva === 'dashboard' ? (
+            {vistaActiva === 'dashboard' && usuario?.rol !== 'SECRETARIA' ? (
               <DashboardRelevos onVerPlanilla={() => setVistaActiva('planilla')} />
             ) : (
               <GrillaProgramacion refreshTrigger={refreshTrigger} />
@@ -188,7 +201,7 @@ const AppContent: React.FC = () => {
       </main>
 
       {/* Moderno Navbar Dock Flotante (Inferior Izquierda / Centrado en móviles) */}
-      {isAuthenticated && (
+      {isAuthenticated && usuario?.rol !== 'SECRETARIA' && (
         <nav
           aria-label="Navegación principal"
           className="fixed bottom-4 left-1/2 -translate-x-1/2 sm:bottom-6 sm:left-6 sm:translate-x-0 z-40 bg-slate-950/95 text-white rounded-2xl p-1.5 shadow-2xl border border-slate-800 backdrop-blur-md flex items-center space-x-1.5 transition-all duration-200"
