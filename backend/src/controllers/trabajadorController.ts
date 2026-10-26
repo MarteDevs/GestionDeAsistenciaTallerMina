@@ -102,18 +102,83 @@ export class TrabajadorController {
   public static async actualizar(req: Request, res: Response): Promise<void> {
     try {
       const id = parseInt(req.params.id);
-      const { nombres, area, activo } = req.body;
+      const {
+        nombres,
+        area,
+        activo,
+        fechaInicioTrabajo,
+        diasDescanso = 10,
+        diasTrabajo = 30,
+        recalcularCronograma,
+      } = req.body;
 
-      const trabajador = await prisma.trabajador.update({
-        where: { id },
-        data: {
-          ...(nombres ? { nombres: nombres.trim().toUpperCase() } : {}),
-          ...(area ? { area: area.trim() } : {}),
-          ...(typeof activo === 'boolean' ? { activo } : {}),
-        },
+      if (isNaN(id)) {
+        res.status(400).json({ success: false, error: 'ID de trabajador inválido.' });
+        return;
+      }
+
+      const trabajadorActualizado = await prisma.$transaction(async (tx) => {
+        const trabajador = await tx.trabajador.update({
+          where: { id },
+          data: {
+            ...(nombres ? { nombres: nombres.trim().toUpperCase() } : {}),
+            ...(area ? { area: area.trim() } : {}),
+            ...(typeof activo === 'boolean' ? { activo } : {}),
+          },
+        });
+
+        // Si se solicitó recalcular el cronograma y se proporcionó fecha de inicio
+        if (recalcularCronograma && fechaInicioTrabajo) {
+          const cantDescanso = parseInt(diasDescanso) || 10;
+          const cantTrabajo = parseInt(diasTrabajo) || 30;
+
+          const inicioTrabajo = new Date(`${String(fechaInicioTrabajo).split('T')[0]}T00:00:00.000Z`);
+          const anioLimite = Math.max(inicioTrabajo.getUTCFullYear(), 2026);
+
+          // 1. Eliminar descansos programados existentes de este trabajador
+          await tx.descansoProgramado.deleteMany({
+            where: { trabajadorId: id },
+          });
+
+          // 2. Generar nuevos descansos a partir de la nueva fecha de inicio laboral
+          let fi = new Date(inicioTrabajo.getTime() + cantTrabajo * 24 * 60 * 60 * 1000);
+          const descansosData: Array<{
+            trabajadorId: number;
+            fechaInicio: Date;
+            fechaFin: Date;
+            cantidadDias: number;
+          }> = [];
+
+          while (fi.getUTCFullYear() <= anioLimite) {
+            const ff = new Date(fi.getTime() + (cantDescanso - 1) * 24 * 60 * 60 * 1000);
+
+            descansosData.push({
+              trabajadorId: id,
+              fechaInicio: fi,
+              fechaFin: ff,
+              cantidadDias: cantDescanso,
+            });
+
+            fi = new Date(ff.getTime() + (cantTrabajo + 1) * 24 * 60 * 60 * 1000);
+          }
+
+          if (descansosData.length > 0) {
+            await tx.descansoProgramado.createMany({
+              data: descansosData,
+            });
+          }
+        }
+
+        return trabajador;
       });
 
-      res.json({ success: true, data: trabajador, message: 'Datos actualizados correctamente.' });
+      res.json({
+        success: true,
+        data: trabajadorActualizado,
+        message: recalcularCronograma && fechaInicioTrabajo
+          ? 'Datos del colaborador actualizados y cronograma 30x10 recalculado correctamente.'
+          : 'Datos actualizados correctamente.',
+      });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }

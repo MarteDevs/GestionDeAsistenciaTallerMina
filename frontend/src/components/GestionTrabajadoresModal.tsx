@@ -21,6 +21,12 @@ interface TrabajadorItem {
   area: string;
   activo: boolean;
   createdAt: string;
+  descansosProgramados?: Array<{
+    id: number;
+    fechaInicio: string;
+    fechaFin: string;
+    cantidadDias: number;
+  }>;
   _count?: {
     descansosProgramados: number;
     excepciones: number;
@@ -52,6 +58,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
   const [fechaInicioTrabajo, setFechaInicioTrabajo] = useState('');
   const [diasTrabajo, setDiasTrabajo] = useState<number>(30);
   const [diasDescanso, setDiasDescanso] = useState<number>(10);
+  const [recalcularCronograma, setRecalcularCronograma] = useState(false);
 
   const [proyectando2027, setProyectando2027] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -89,6 +96,7 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
     setFechaInicioTrabajo('');
     setDiasTrabajo(30);
     setDiasDescanso(10);
+    setRecalcularCronograma(false);
     setMensajeError(null);
   };
 
@@ -123,19 +131,30 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ nombres, area }),
+          body: JSON.stringify({
+            nombres,
+            area,
+            fechaInicioTrabajo: fechaInicioTrabajo || null,
+            diasTrabajo,
+            diasDescanso,
+            recalcularCronograma: recalcularCronograma && !!fechaInicioTrabajo,
+          }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
 
         // Feedback positivo y cierre automático
-        setMensajeExito('Colaborador actualizado exitosamente. Actualizando vista...');
+        setMensajeExito(
+          recalcularCronograma && fechaInicioTrabajo
+            ? `Colaborador ${nombres} actualizado y cronograma 30x10 recalculado correctamente.`
+            : `Colaborador ${nombres} actualizado correctamente.`
+        );
         onTrabajadoresActualizados();
 
         setTimeout(() => {
           limpiarFormulario();
           onClose();
-        }, 1200);
+        }, 1300);
       } else {
         const res = await fetch('/api/trabajadores', {
           method: 'POST',
@@ -200,7 +219,23 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
     setIdEditando(t.id);
     setNombres(t.nombres);
     setArea(t.area);
-    setFechaInicioTrabajo('');
+    setRecalcularCronograma(false);
+
+    // Si tiene descansos programados, estimar la fecha en que inició a laborar (30 días antes del 1er descanso)
+    if (t.descansosProgramados && t.descansosProgramados.length > 0) {
+      try {
+        const primerDescanso = new Date(t.descansosProgramados[0].fechaInicio);
+        const inicioEstimado = new Date(primerDescanso.getTime() - 30 * 24 * 60 * 60 * 1000);
+        setFechaInicioTrabajo(inicioEstimado.toISOString().split('T')[0]);
+      } catch {
+        setFechaInicioTrabajo('');
+      }
+    } else {
+      setFechaInicioTrabajo('');
+    }
+
+    setDiasTrabajo(30);
+    setDiasDescanso(10);
     setMensajeExito(null);
   };
 
@@ -337,71 +372,92 @@ export const GestionTrabajadoresModal: React.FC<GestionTrabajadoresModalProps> =
                 </select>
               </div>
 
-              {!modoEdicion && (
-                <>
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1 flex items-center space-x-1">
-                      <CalendarDays className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Fecha de Inicio de Trabajo</span>
-                    </label>
+              <div>
+                <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1 flex items-center space-x-1">
+                  <CalendarDays className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Fecha de Inicio de Trabajo</span>
+                </label>
+                <input
+                  type="date"
+                  value={fechaInicioTrabajo}
+                  onChange={(e) => {
+                    setFechaInicioTrabajo(e.target.value);
+                    if (modoEdicion) setRecalcularCronograma(true);
+                  }}
+                  className="w-full rounded-xl border border-amber-300 bg-amber-50/40 px-3 py-2 text-xs text-slate-900 font-bold focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                />
+                <span className="text-[10px] text-slate-500 block mt-1">
+                  {modoEdicion
+                    ? 'Día de inicio laboral de su ciclo. Si lo modificas, puedes recalcular su cronograma.'
+                    : 'Día en que el trabajador sube a mina o entra a laborar.'}
+                </span>
+
+                {modoEdicion && (
+                  <label className="mt-2.5 flex items-center space-x-2 p-2.5 rounded-xl bg-amber-50/90 border border-amber-200 cursor-pointer">
                     <input
-                      type="date"
-                      value={fechaInicioTrabajo}
-                      onChange={(e) => setFechaInicioTrabajo(e.target.value)}
-                      className="w-full rounded-xl border border-amber-300 bg-amber-50/40 px-3 py-2 text-xs text-slate-900 font-bold focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                      type="checkbox"
+                      checked={recalcularCronograma}
+                      onChange={(e) => setRecalcularCronograma(e.target.checked)}
+                      className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
                     />
-                    <span className="text-[10px] text-slate-500 block mt-1">
-                      Día en que el trabajador sube a mina o entra a laborar.
+                    <span className="text-[11px] font-bold text-amber-950">
+                      Recalcular cronograma de turnos (30x10) con esta fecha
                     </span>
+                  </label>
+                )}
+              </div>
+
+              {/* Parámetros de Régimen */}
+              <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase text-slate-700 flex items-center space-x-1">
+                    <span>Régimen Operativo</span>
+                    <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+                  </span>
+                  <span className="text-[11px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-900">
+                    {diasTrabajo} días Trabajo x {diasDescanso} días Descanso
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Días de Trabajo (Labor)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={diasTrabajo}
+                      onChange={(e) => {
+                        setDiasTrabajo(Number(e.target.value));
+                        if (modoEdicion) setRecalcularCronograma(true);
+                      }}
+                      className="w-full rounded-lg border border-slate-200 p-1.5 text-xs text-center font-bold text-slate-800"
+                    />
                   </div>
 
-                  {/* Parámetros de Régimen */}
-                  <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase text-slate-700 flex items-center space-x-1">
-                        <span>Régimen Operativo</span>
-                        <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-                      </span>
-                      <span className="text-[11px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-900">
-                        {diasTrabajo} días Trabajo x {diasDescanso} días Descanso
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Días de Trabajo (Labor)</label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={60}
-                          value={diasTrabajo}
-                          onChange={(e) => setDiasTrabajo(Number(e.target.value))}
-                          className="w-full rounded-lg border border-slate-200 p-1.5 text-xs text-center font-bold text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Días Descanso (DL)</label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={30}
-                          value={diasDescanso}
-                          onChange={(e) => setDiasDescanso(Number(e.target.value))}
-                          className="w-full rounded-lg border border-slate-200 p-1.5 text-xs text-center font-bold text-purple-700"
-                        />
-                      </div>
-                    </div>
-
-                    {preview && (
-                      <div className="mt-1 p-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px] space-y-0.5 text-slate-600">
-                        <div>🔨 <b>1er Ciclo Laboral:</b> {preview.trabajo} ({diasTrabajo} días)</div>
-                        <div className="text-purple-700 font-bold">🏖 <b>1er Descanso (DL):</b> {preview.descanso} ({diasDescanso} días)</div>
-                      </div>
-                    )}
+                  <div>
+                    <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Días Descanso (DL)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={diasDescanso}
+                      onChange={(e) => {
+                        setDiasDescanso(Number(e.target.value));
+                        if (modoEdicion) setRecalcularCronograma(true);
+                      }}
+                      className="w-full rounded-lg border border-slate-200 p-1.5 text-xs text-center font-bold text-purple-700"
+                    />
                   </div>
-                </>
-              )}
+                </div>
+
+                {preview && (
+                  <div className="mt-1 p-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px] space-y-0.5 text-slate-600">
+                    <div>🔨 <b>1er Ciclo Laboral:</b> {preview.trabajo} ({diasTrabajo} días)</div>
+                    <div className="text-purple-700 font-bold">🏖 <b>1er Descanso (DL):</b> {preview.descanso} ({diasDescanso} días)</div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex justify-end pt-2">

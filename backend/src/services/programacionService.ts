@@ -263,16 +263,54 @@ export class ProgramacionService {
   }
 
   public static async eliminarExcepcion(
-    data: { trabajadorId: number; fecha: string },
+    data: { trabajadorId: number; fecha?: string; fechas?: string[] },
     client: any = prisma
   ) {
-    const { trabajadorId, fecha } = data;
-    const fechaLimpia = String(fecha).split('T')[0];
-    const fechaObj = new Date(`${fechaLimpia}T00:00:00.000Z`);
+    const { trabajadorId, fecha, fechas } = data;
+    const listaFechas: Date[] = [];
+
+    if (fecha) {
+      const fechaLimpia = String(fecha).split('T')[0];
+      listaFechas.push(new Date(`${fechaLimpia}T00:00:00.000Z`));
+    }
+
+    if (Array.isArray(fechas) && fechas.length > 0) {
+      fechas.forEach((f) => {
+        const limpia = String(f).split('T')[0];
+        listaFechas.push(new Date(`${limpia}T00:00:00.000Z`));
+      });
+    }
+
+    if (listaFechas.length === 0) {
+      throw new Error('Debe especificar al menos una fecha para eliminar o anular la excepción.');
+    }
+
     return await client.excepcion.deleteMany({
       where: {
         trabajadorId,
-        fecha: fechaObj,
+        fecha: { in: listaFechas },
+      },
+    });
+  }
+
+  public static async actualizarExcepcion(
+    data: { trabajadorId: number; fecha: string; motivo?: string | null; tipo?: TipoExcepcion },
+    client: any = prisma
+  ) {
+    const { trabajadorId, fecha, motivo, tipo } = data;
+    const fechaLimpia = String(fecha).split('T')[0];
+    const fechaObj = new Date(`${fechaLimpia}T00:00:00.000Z`);
+
+    return await client.excepcion.update({
+      where: {
+        trabajadorId_fecha: {
+          trabajadorId,
+          fecha: fechaObj,
+        },
+      },
+      data: {
+        ...(motivo !== undefined ? { motivo: motivo ? String(motivo).trim() : null } : {}),
+        ...(tipo ? { tipo } : {}),
       },
     });
   }

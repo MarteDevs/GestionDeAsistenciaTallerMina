@@ -49,6 +49,22 @@ data class GenericApiResponse(
 )
 
 @Serializable
+data class EliminarExcepcionesRequest(
+    val trabajadorId: Int,
+    val fechas: List<String>
+)
+
+@Serializable
+data class ActualizarTrabajadorRequest(
+    val nombres: String? = null,
+    val area: String? = null,
+    val fechaInicioTrabajo: String? = null,
+    val diasTrabajo: Int? = null,
+    val diasDescanso: Int? = null,
+    val recalcularCronograma: Boolean = false
+)
+
+@Serializable
 data class DescansoDto(
     val id: Int = 0,
     val anio: Int = 2026,

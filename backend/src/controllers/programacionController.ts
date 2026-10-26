@@ -35,21 +35,51 @@ export class ProgramacionController {
     try {
       const trabajadorId = req.body?.trabajadorId || req.query?.trabajadorId;
       const fecha = req.body?.fecha || req.query?.fecha;
+      const fechas = req.body?.fechas;
 
+      if (!trabajadorId || (!fecha && (!fechas || !Array.isArray(fechas) || fechas.length === 0))) {
+        res.status(400).json({ success: false, error: 'trabajadorId y al menos una fecha son requeridos' });
+        return;
+      }
+
+      await ProgramacionService.eliminarExcepcion({
+        trabajadorId: Number(trabajadorId),
+        fecha: fecha ? String(fecha) : undefined,
+        fechas: Array.isArray(fechas) ? fechas.map(String) : undefined,
+      });
+
+      res.json({
+        success: true,
+        message: 'Excepción(es) anulada(s) correctamente. El día ha vuelto a su estado original.',
+      });
+    } catch (error: any) {
+      console.error('Error al eliminar excepción:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  public static async actualizarExcepcion(req: Request, res: Response): Promise<void> {
+    try {
+      const { trabajadorId, fecha, motivo, tipo } = req.body;
       if (!trabajadorId || !fecha) {
         res.status(400).json({ success: false, error: 'trabajadorId y fecha son requeridos' });
         return;
       }
-      await ProgramacionService.eliminarExcepcion({
+
+      const excepcion = await ProgramacionService.actualizarExcepcion({
         trabajadorId: Number(trabajadorId),
         fecha: String(fecha),
+        motivo,
+        tipo,
       });
+
       res.json({
         success: true,
-        message: 'Excepción eliminada correctamente. El día ha vuelto a su estado original.',
+        data: excepcion,
+        message: 'Excepción actualizada correctamente.',
       });
     } catch (error: any) {
-      console.error('Error al eliminar excepción:', error);
+      console.error('Error al actualizar excepción:', error);
       res.status(500).json({ success: false, error: error.message });
     }
   }
@@ -77,11 +107,27 @@ export class ProgramacionController {
       });
 
       if (!descanso) {
-        // No está en descanso programado base
+        // No está en descanso programado base: verificar si este día laboral tiene permiso registrado
+        const excepcionDia = await prisma.excepcion.findUnique({
+          where: {
+            trabajadorId_fecha: {
+              trabajadorId,
+              fecha: fechaObj,
+            },
+          },
+        });
+
         res.json({
           success: true,
           esDescansoBase: false,
           dias: [],
+          excepcionActual: excepcionDia
+            ? {
+                tipo: excepcionDia.tipo,
+                motivo: excepcionDia.motivo,
+                fecha: ProgramacionService.formatFechaIso(new Date(excepcionDia.fecha)),
+              }
+            : null,
         });
         return;
       }
@@ -97,9 +143,12 @@ export class ProgramacionController {
         },
       });
 
-      const excMap = new Map<string, string>();
+      const excMap = new Map<string, { tipo: string; motivo: string | null }>();
       excepciones.forEach((e) => {
-        excMap.set(ProgramacionService.formatFechaIso(new Date(e.fecha)), e.tipo);
+        excMap.set(ProgramacionService.formatFechaIso(new Date(e.fecha)), {
+          tipo: e.tipo,
+          motivo: e.motivo,
+        });
       });
 
       const diasBloque = [];
@@ -111,8 +160,8 @@ export class ProgramacionController {
       let curr = new Date(fi);
       while (curr <= ff) {
         const fechaStr = ProgramacionService.formatFechaIso(curr);
-        const excTipo = excMap.get(fechaStr);
-        const estado = excTipo ? (excTipo === 'VENTA_DESCANSO' ? 'VD' : 'P') : 'DL';
+        const excInfo = excMap.get(fechaStr);
+        const estado = excInfo ? (excInfo.tipo === 'VENTA_DESCANSO' ? 'VD' : 'P') : 'DL';
 
         diasBloque.push({
           fecha: fechaStr,
@@ -120,6 +169,7 @@ export class ProgramacionController {
           diaSemana: nombresDias[curr.getUTCDay()],
           estado,
           disponibleParaVenta: estado === 'DL',
+          motivo: excInfo ? excInfo.motivo : null,
         });
 
         curr = new Date(curr.getTime() + 24 * 60 * 60 * 1000);

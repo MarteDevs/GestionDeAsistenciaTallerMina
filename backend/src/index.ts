@@ -29,6 +29,7 @@ app.get('/api/auth/perfil', authMiddleware, AuthController.perfil);
 app.get('/api/programacion', ProgramacionController.getGrilla);
 app.get('/api/programacion/bloque-descanso', ProgramacionController.getDetalleBloqueDescanso);
 app.post('/api/excepciones', authMiddleware, ProgramacionController.crearExcepcion);
+app.put('/api/excepciones', authMiddleware, ProgramacionController.actualizarExcepcion);
 app.post('/api/excepciones/rango', authMiddleware, TrabajadorController.registrarExcepcionesRango);
 app.delete('/api/excepciones', authMiddleware, ProgramacionController.eliminarExcepcion);
 

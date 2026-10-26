@@ -12,7 +12,11 @@ import {
   Layers,
   ArrowRightLeft,
   CheckSquare,
-  Square
+  Square,
+  Trash2,
+  Edit3,
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 
 interface DiaBloqueItem {
@@ -21,6 +25,7 @@ interface DiaBloqueItem {
   diaSemana: string;
   estado: string; // 'DL' | 'VD' | 'P'
   disponibleParaVenta: boolean;
+  motivo?: string | null;
 }
 
 interface ModalExcepcionProps {
@@ -44,7 +49,7 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
 }) => {
   const { token, isAuthenticated } = useAuth();
   const [tipo, setTipo] = useState<'VENTA_DESCANSO' | 'PERMISO'>(
-    estadoActual === 'DL' ? 'VENTA_DESCANSO' : 'PERMISO'
+    estadoActual === 'DL' || estadoActual === 'VD' ? 'VENTA_DESCANSO' : 'PERMISO'
   );
 
   // Días del bloque de descanso obtenidos del backend
@@ -58,28 +63,38 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
   const [motivo, setMotivo] = useState('');
   const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+
+  const yaTieneExcepcion = estadoActual === 'VD' || estadoActual === 'P';
 
   // Cargar el bloque del descanso cuando se abre el modal
   useEffect(() => {
     if (!isOpen || !trabajadorId || !fecha) return;
 
     setError(null);
+    setMensajeExito(null);
     setLoadingBloque(true);
+    setMotivo('');
 
     fetch(`/api/programacion/bloque-descanso?trabajadorId=${trabajadorId}&fecha=${fecha}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.esDescansoBase) {
           setEsDescansoBase(true);
-          setDiasBloque(data.dias);
+          setDiasBloque(data.dias || []);
 
-          // Si es venta de descanso, pre-seleccionar solo la fecha en la que hizo clic si está disponible
-          const diaInicial = data.dias.find((d: DiaBloqueItem) => d.fecha === fecha);
+          // Si el día clickeado ya tiene motivo, cargarlo
+          const diaInicial = (data.dias || []).find((d: DiaBloqueItem) => d.fecha === fecha);
+          if (diaInicial && diaInicial.motivo) {
+            setMotivo(diaInicial.motivo);
+          }
+
+          // Preselección de fechas si está disponible para venta
           if (diaInicial && diaInicial.disponibleParaVenta) {
             setFechasSeleccionadas([fecha]);
           } else {
-            // Si ya estaba vendido, buscar el primer disponible
-            const primerDisp = data.dias.find((d: DiaBloqueItem) => d.disponibleParaVenta);
+            // Si ya estaba vendido o no disponible, buscar el primer disponible
+            const primerDisp = (data.dias || []).find((d: DiaBloqueItem) => d.disponibleParaVenta);
             setFechasSeleccionadas(primerDisp ? [primerDisp.fecha] : []);
           }
         } else {
@@ -88,6 +103,10 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
           setDiasBloque([]);
           setFechasSeleccionadas([fecha]);
           setTipo('PERMISO');
+
+          if (data.excepcionActual && data.excepcionActual.motivo) {
+            setMotivo(data.excepcionActual.motivo);
+          }
         }
       })
       .catch((err) => {
@@ -97,7 +116,7 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
       .finally(() => {
         setLoadingBloque(false);
       });
-  }, [isOpen, trabajadorId, fecha]);
+  }, [isOpen, trabajadorId, fecha, estadoActual]);
 
   if (!isOpen) return null;
 
@@ -137,6 +156,90 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
     setError(null);
   };
 
+  // Anular/Revertir excepción (eliminar VD o P)
+  const handleAnularExcepciones = async (fechasAnular: string[]) => {
+    if (!isAuthenticated || !token || fechasAnular.length === 0) return;
+
+    const textoConfirmacion =
+      fechasAnular.length === 1
+        ? `¿Estás seguro de anular la excepción del día ${fechasAnular[0]}? Volverá a su estado programado original.`
+        : `¿Estás seguro de anular las excepciones de los ${fechasAnular.length} días seleccionados? Volverán a su estado programado original.`;
+
+    if (!confirm(textoConfirmacion)) return;
+
+    setLoadingSubmit(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/excepciones', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          trabajadorId,
+          fechas: fechasAnular,
+        }),
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Error al anular la excepción');
+      }
+
+      setMensajeExito('Excepción anulada exitosamente. Actualizando vista...');
+      onSuccess();
+      setTimeout(() => {
+        onClose();
+      }, 900);
+    } catch (err: any) {
+      setError(err.message || 'Error al procesar la anulación');
+    } finally {
+      setLoadingSubmit(false);
+    }
+  };
+
+  // Actualizar motivo u observación de una excepción existente
+  const handleActualizarMotivo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated || !token) return;
+
+    setLoadingSubmit(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/excepciones', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          trabajadorId,
+          fecha,
+          motivo,
+        }),
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Error al actualizar el motivo');
+      }
+
+      setMensajeExito('Motivo actualizado correctamente.');
+      onSuccess();
+      setTimeout(() => {
+        onClose();
+      }, 900);
+    } catch (err: any) {
+      setError(err.message || 'Error al actualizar el motivo');
+    } finally {
+      setLoadingSubmit(false);
+    }
+  };
+
+  // Registrar nueva excepción
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated || !token) {
@@ -195,6 +298,7 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
 
   const diasDisponiblesTotales = diasBloque.filter((d) => d.disponibleParaVenta).length;
   const diasVendidosPreviamente = diasBloque.filter((d) => d.estado === 'VD').length;
+  const fechasVendidasBloque = diasBloque.filter((d) => d.estado === 'VD').map((d) => d.fecha);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -206,8 +310,14 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold tracking-tight">Registro de Novedades y Turnos</h3>
-              <p className="text-xs text-slate-300">Selecciona con un clic los días libres que deseas vender o aplicar permiso</p>
+              <h3 className="text-base font-bold tracking-tight">
+                {yaTieneExcepcion ? 'Gestión y Modificación de Novedad' : 'Registro de Novedades y Turnos'}
+              </h3>
+              <p className="text-xs text-slate-300">
+                {yaTieneExcepcion
+                  ? 'Modifica el motivo o anula la excepción para revertir al cronograma original'
+                  : 'Selecciona con un clic los días libres que deseas vender o aplicar permiso'}
+              </p>
             </div>
           </div>
           <button
@@ -219,7 +329,7 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
         </div>
 
         {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={yaTieneExcepcion ? handleActualizarMotivo : handleSubmit} className="p-5 space-y-4">
           {/* Card Info Colaborador */}
           <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
             <div className="flex items-center space-x-2">
@@ -233,56 +343,98 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
               <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
               <div>
                 <span className="block text-[10px] uppercase font-bold text-slate-400">Día Consultado</span>
-                <span className="font-semibold text-slate-800">{fecha}</span>
+                <span className="font-semibold text-slate-800 flex items-center space-x-1.5">
+                  <span>{fecha}</span>
+                  {estadoActual === 'VD' && (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500 text-white">VD</span>
+                  )}
+                  {estadoActual === 'P' && (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500 text-white">P</span>
+                  )}
+                  {estadoActual === 'DL' && (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-600 text-white">DL</span>
+                  )}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Tipo de Operación */}
-          <div>
-            <label className="flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-              <Tag className="w-3.5 h-3.5 text-amber-500" />
-              <span>Tipo de Operación Minera</span>
-            </label>
-            <div className="grid grid-cols-2 gap-3">
+          {/* Banner de Acción si el día ya cuenta con excepción registrada */}
+          {yaTieneExcepcion && (
+            <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300 text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-start space-x-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block">
+                    {estadoActual === 'VD'
+                      ? 'Este día está registrado como Venta de Descanso (VD)'
+                      : 'Este día está registrado como Permiso / Falta (P)'}
+                  </span>
+                  <span className="text-[11px] text-amber-800">
+                    Puedes anular la excepción para que regrese a su estado original (
+                    {estadoActual === 'VD' ? 'Descanso Libre DL' : 'Labor Normal T'}).
+                  </span>
+                </div>
+              </div>
               <button
                 type="button"
-                disabled={!esDescansoBase}
-                onClick={() => setTipo('VENTA_DESCANSO')}
-                className={`flex flex-col p-2.5 rounded-xl border text-left transition-all ${
-                  tipo === 'VENTA_DESCANSO'
-                    ? 'border-emerald-500 bg-emerald-50/80 ring-2 ring-emerald-500/20 shadow-sm'
-                    : 'border-slate-200 hover:border-slate-300 bg-white disabled:opacity-40'
-                }`}
+                onClick={() => handleAnularExcepciones([fecha])}
+                disabled={loadingSubmit}
+                className="inline-flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition shrink-0 disabled:opacity-50"
               >
-                <div className="flex items-center space-x-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                  <span className="text-xs font-bold text-emerald-900">Venta de Descanso (VD)</span>
-                </div>
-                <span className="text-[10px] text-slate-500 mt-0.5">
-                  Trabajar en días programados libres (DL) - Máx. 5 días
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTipo('PERMISO')}
-                className={`flex flex-col p-2.5 rounded-xl border text-left transition-all ${
-                  tipo === 'PERMISO'
-                    ? 'border-rose-500 bg-rose-50/80 ring-2 ring-rose-500/20 shadow-sm'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                }`}
-              >
-                <div className="flex items-center space-x-1.5">
-                  <ArrowRightLeft className="w-3 h-3 text-rose-500" />
-                  <span className="text-xs font-bold text-rose-900">Permiso / Adelanto (P)</span>
-                </div>
-                <span className="text-[10px] text-slate-500 mt-0.5">
-                  Falta o adelanto en su ciclo de labor
-                </span>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Anular Este Día</span>
               </button>
             </div>
-          </div>
+          )}
+
+          {/* Tipo de Operación (Solo cuando se va a registrar algo nuevo) */}
+          {!yaTieneExcepcion && (
+            <div>
+              <label className="flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                <Tag className="w-3.5 h-3.5 text-amber-500" />
+                <span>Tipo de Operación Minera</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  disabled={!esDescansoBase}
+                  onClick={() => setTipo('VENTA_DESCANSO')}
+                  className={`flex flex-col p-2.5 rounded-xl border text-left transition-all ${
+                    tipo === 'VENTA_DESCANSO'
+                      ? 'border-emerald-500 bg-emerald-50/80 ring-2 ring-emerald-500/20 shadow-sm'
+                      : 'border-slate-200 hover:border-slate-300 bg-white disabled:opacity-40'
+                  }`}
+                >
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span className="text-xs font-bold text-emerald-900">Venta de Descanso (VD)</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-0.5">
+                    Trabajar en días programados libres (DL) - Máx. 5 días
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTipo('PERMISO')}
+                  className={`flex flex-col p-2.5 rounded-xl border text-left transition-all ${
+                    tipo === 'PERMISO'
+                      ? 'border-rose-500 bg-rose-50/80 ring-2 ring-rose-500/20 shadow-sm'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-1.5">
+                    <ArrowRightLeft className="w-3 h-3 text-rose-500" />
+                    <span className="text-xs font-bold text-rose-900">Permiso / Adelanto (P)</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-0.5">
+                    Falta o adelanto en su ciclo de labor
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* LISTA DE DÍAS DEL PERÍODO CON CHECKBOXES INTERACTIVOS */}
           {loadingBloque ? (
@@ -305,20 +457,36 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-1.5 text-xs">
-                  <button
-                    type="button"
-                    onClick={seleccionarMaximoPermitido}
-                    className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] shadow-sm transition"
-                  >
-                    Marcar Permitidos (Máx. 5)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={desmarcarTodos}
-                    className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-semibold text-[10px] border border-purple-200 transition"
-                  >
-                    Limpiar
-                  </button>
+                  {diasVendidosPreviamente > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleAnularExcepciones(fechasVendidasBloque)}
+                      disabled={loadingSubmit}
+                      className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-[10px] shadow-sm transition disabled:opacity-50"
+                      title="Revertir todas las ventas de este ciclo a días libres"
+                    >
+                      <RotateCcw className="w-3 h-3 inline mr-1" />
+                      Anular Todas ({diasVendidosPreviamente})
+                    </button>
+                  )}
+                  {!yaTieneExcepcion && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={seleccionarMaximoPermitido}
+                        className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] shadow-sm transition"
+                      >
+                        Marcar Disponibles
+                      </button>
+                      <button
+                        type="button"
+                        onClick={desmarcarTodos}
+                        className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-semibold text-[10px] border border-purple-200 transition"
+                      >
+                        Limpiar
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -326,17 +494,20 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
               <div className="grid grid-cols-5 gap-2 pt-1">
                 {diasBloque.map((item) => {
                   const seleccionado = fechasSeleccionadas.includes(item.fecha);
-                  const deshabilitado = !item.disponibleParaVenta;
+                  const esVendido = item.estado === 'VD';
+                  const esPermiso = item.estado === 'P';
 
                   return (
                     <button
                       key={item.fecha}
                       type="button"
-                      disabled={deshabilitado}
+                      disabled={esVendido || esPermiso}
                       onClick={() => toggleDiaSeleccionado(item.fecha)}
                       className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center relative ${
-                        deshabilitado
-                          ? 'bg-emerald-100/70 border-emerald-300 text-emerald-800 cursor-not-allowed opacity-80'
+                        esVendido
+                          ? 'bg-emerald-100/80 border-emerald-300 text-emerald-900 cursor-not-allowed shadow-sm'
+                          : esPermiso
+                          ? 'bg-rose-100/80 border-rose-300 text-rose-900 cursor-not-allowed shadow-sm'
                           : seleccionado
                           ? 'bg-purple-700 border-purple-800 text-white shadow-md ring-2 ring-purple-400'
                           : 'bg-white hover:bg-purple-100/70 border-purple-200 text-slate-800 cursor-pointer'
@@ -350,9 +521,13 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
                       </span>
 
                       {/* Estado */}
-                      {deshabilitado ? (
-                        <span className="text-[9px] font-extrabold px-1 rounded bg-emerald-600 text-white">
-                          Vendido
+                      {esVendido ? (
+                        <span className="text-[8.5px] font-black px-1.5 py-0.5 rounded bg-emerald-600 text-white mt-0.5">
+                          VD Vendido
+                        </span>
+                      ) : esPermiso ? (
+                        <span className="text-[8.5px] font-black px-1.5 py-0.5 rounded bg-rose-600 text-white mt-0.5">
+                          P Permiso
                         </span>
                       ) : (
                         <div className="mt-0.5">
@@ -368,20 +543,22 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
                 })}
               </div>
 
-              <div className="text-[11px] font-bold text-purple-900 pt-1 flex items-center justify-between">
-                <span>Has seleccionado: <b>{fechasSeleccionadas.length}</b> días para {tipo === 'VENTA_DESCANSO' ? 'vender' : 'permiso'}</span>
-                {fechasSeleccionadas.length > 0 && (
-                  <span className="text-amber-700">({fechasSeleccionadas.join(', ')})</span>
-                )}
-              </div>
+              {!yaTieneExcepcion && (
+                <div className="text-[11px] font-bold text-purple-900 pt-1 flex items-center justify-between">
+                  <span>Has seleccionado: <b>{fechasSeleccionadas.length}</b> días para {tipo === 'VENTA_DESCANSO' ? 'vender' : 'permiso'}</span>
+                  {fechasSeleccionadas.length > 0 && (
+                    <span className="text-amber-700">({fechasSeleccionadas.join(', ')})</span>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
-              <span>Día laborable seleccionado: <b>{fecha}</b> (Se aplicará como Permiso / Adelanto laboral).</span>
+              <span>Día laborable seleccionado: <b>{fecha}</b>.</span>
             </div>
           )}
 
-          {/* Motivo */}
+          {/* Motivo o Justificación */}
           <div>
             <label className="flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
               <FileText className="w-3.5 h-3.5 text-slate-400" />
@@ -391,10 +568,17 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
               rows={2}
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ej. Venta voluntaria de días para cobertura de taller"
-              className="w-full rounded-xl border border-slate-200 p-2 text-xs text-slate-800 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition resize-none"
+              placeholder="Ej. Venta voluntaria de días para cobertura de taller en mina"
+              className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition resize-none"
             />
           </div>
+
+          {mensajeExito && (
+            <div className="flex items-center space-x-2 rounded-xl bg-emerald-50 border border-emerald-300 p-3 text-xs font-bold text-emerald-900">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{mensajeExito}</span>
+            </div>
+          )}
 
           {error && (
             <div className="flex items-start space-x-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
@@ -410,29 +594,57 @@ export const ModalExcepcion: React.FC<ModalExcepcionProps> = ({
           )}
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loadingSubmit}
-              className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loadingSubmit || !isAuthenticated || fechasSeleccionadas.length === 0}
-              className="inline-flex items-center space-x-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 disabled:opacity-50 transition"
-            >
-              {loadingSubmit ? (
-                <span>Guardando...</span>
-              ) : (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>Confirmar ({fechasSeleccionadas.length} {fechasSeleccionadas.length === 1 ? 'Día' : 'Días'})</span>
-                </>
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            <div>
+              {yaTieneExcepcion && (
+                <button
+                  type="button"
+                  onClick={() => handleAnularExcepciones([fecha])}
+                  disabled={loadingSubmit || !isAuthenticated}
+                  className="inline-flex items-center space-x-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 px-3.5 py-2 text-xs font-bold text-rose-700 transition disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Anular Excepción</span>
+                </button>
               )}
-            </button>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loadingSubmit}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
+              >
+                Cerrar
+              </button>
+
+              {yaTieneExcepcion ? (
+                <button
+                  type="submit"
+                  disabled={loadingSubmit || !isAuthenticated}
+                  className="inline-flex items-center space-x-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 disabled:opacity-50 transition"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span>{loadingSubmit ? 'Guardando...' : 'Guardar Motivo Modificado'}</span>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={loadingSubmit || !isAuthenticated || fechasSeleccionadas.length === 0}
+                  className="inline-flex items-center space-x-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 disabled:opacity-50 transition"
+                >
+                  {loadingSubmit ? (
+                    <span>Guardando...</span>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Confirmar ({fechasSeleccionadas.length} {fechasSeleccionadas.length === 1 ? 'Día' : 'Días'})</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </form>
       </div>
