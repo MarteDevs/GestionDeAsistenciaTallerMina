@@ -390,7 +390,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
                             : 'bg-slate-200 text-slate-700'
                         }`}
                       >
-                        {ev.diasRestantes === 0 ? '¡Termina descanso hoy!' : `Retorna en ${ev.diasRestantes} días`}
+                        {ev.diasRestantes === 0 ? 'Retorna mañana' : `Retorna en ${ev.diasRestantes + 1} días`}
                       </span>
                     </div>
 

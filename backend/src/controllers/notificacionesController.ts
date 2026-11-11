@@ -10,10 +10,12 @@ export interface EventoTurnoProximo {
   area: string;
   fechaEvento: string;       // YYYY-MM-DD
   diasRestantes: number;     // 0 = hoy, 1 = mañana, etc.
+  esHoy: boolean;
   descripcion: string;
   detalle: {
     fechaInicio?: string;
     fechaFin?: string;
+    fechaRetorno?: string;
     cantidadDias?: number;
     motivo?: string | null;
   };
@@ -103,16 +105,17 @@ export class NotificacionesController {
               trabajadorId: t.id,
               nombres: t.nombres,
               area: t.area,
-              fechaEvento: ffStr,
+              // Fecha efectiva de retorno al taller (coincide con la pestaña Colaboradores: fechaFin + 1 día)
+              fechaEvento: subidaStr,
               diasRestantes: diasParaFin,
+              esHoy: diasParaFin === 0,
               descripcion: diasParaFin === 0
-                ? `${t.nombres} culmina hoy su descanso. Retorna al taller mañana (${subidaStr}).`
-                : diasParaFin === 1
-                ? `${t.nombres} está en descanso (último día). Retorna al taller el ${subidaStr}.`
-                : `${t.nombres} se encuentra en descanso (le quedan ${diasParaFin} días). Retorna al taller el ${subidaStr}.`,
+                ? `${t.nombres} retorna a mina mañana (${subidaStr}).`
+                : `${t.nombres} retorna a mina el ${subidaStr} (en ${diasParaFin + 1} días).`,
               detalle: {
                 fechaInicio: fiStr,
                 fechaFin: ffStr,
+                fechaRetorno: subidaStr,
                 cantidadDias: dp.cantidadDias,
               },
             });
@@ -130,9 +133,12 @@ export class NotificacionesController {
               area: t.area,
               fechaEvento: fiStr,
               diasRestantes: diffDias,
-              descripcion: diffDias === 1
-                ? `${t.nombres} culmina guardia en mina y baja a descanso mañana (${fiStr}).`
-                : `${t.nombres} culmina guardia y baja a descanso en ${diffDias} días (${fiStr}).`,
+              esHoy: diffDias === 0,
+              descripcion: diffDias === 0
+                ? `${t.nombres} sale a descanso hoy (${fiStr}).`
+                : diffDias === 1
+                ? `${t.nombres} sale a descanso mañana (${fiStr}).`
+                : `${t.nombres} sale a descanso el ${fiStr} (en ${diffDias} días).`,
               detalle: {
                 fechaInicio: fiStr,
                 fechaFin: ffStr,
@@ -157,6 +163,7 @@ export class NotificacionesController {
               area: t.area,
               fechaEvento: excFechaStr,
               diasRestantes: diffDias,
+              esHoy: diffDias === 0,
               descripcion: diffDias === 0
                 ? `${t.nombres} tiene venta de descanso activa hoy (${excFechaStr}).`
                 : `${t.nombres} tiene venta de descanso en ${diffDias} días (${excFechaStr}).`,
@@ -174,6 +181,7 @@ export class NotificacionesController {
               area: t.area,
               fechaEvento: excFechaStr,
               diasRestantes: diffDias,
+              esHoy: diffDias === 0,
               descripcion: diffDias === 0
                 ? `${t.nombres} tiene permiso programado hoy (${excFechaStr}).`
                 : `${t.nombres} tiene permiso en ${diffDias} días (${excFechaStr}).`,

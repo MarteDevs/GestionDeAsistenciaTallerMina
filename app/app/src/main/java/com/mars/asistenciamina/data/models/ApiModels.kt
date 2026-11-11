@@ -4,6 +4,15 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class DetalleEventoDto(
+    val fechaInicio: String? = null,
+    val fechaFin: String? = null,
+    val fechaRetorno: String? = null,
+    val cantidadDias: Int? = null,
+    val motivo: String? = null
+)
+
+@Serializable
 data class EventoNotificacionDto(
     val id: String = "",
     val tipo: String = "", // 'INICIO_DESCANSO' | 'FIN_DESCANSO' | 'VENTA_ACTIVA' | 'PERMISO_ACTIVO'
@@ -14,7 +23,8 @@ data class EventoNotificacionDto(
     val diasRestantes: Int = 0,
     val descripcion: String = "",
     val titulo: String = "",
-    val esHoy: Boolean = false
+    val esHoy: Boolean = false,
+    val detalle: DetalleEventoDto? = null
 )
 
 @Serializable

@@ -289,7 +289,7 @@ fun obtenerEstadoOperativo(descansos: List<DescansoDto>): EstadoOperativoTrabaja
     }
 
     val hoy = LocalDate.now()
-    val fmt = DateTimeFormatter.ofPattern("dd MMM")
+    val fmt = DateTimeFormatter.ofPattern("dd MMM", java.util.Locale.forLanguageTag("es-PE"))
 
     // 1. ¿Está actualmente en descanso hoy?
     val descansoActivo = descansos.firstOrNull { d ->

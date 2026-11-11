@@ -1211,8 +1211,14 @@ fun ItemNotificacionSheet(
         else -> Icons.Default.Assignment
     }
 
-    val fechaLegible = remember(evento.fecha) {
-        formatearFechaEspanol(evento.fecha)
+    val fechaEfectiva = remember(evento) {
+        obtenerFechaDashboard(evento)
+    }
+
+    val esEventoHoy = evento.esHoy || evento.diasRestantes <= 0
+
+    val fechaLegible = remember(fechaEfectiva) {
+        formatearFechaEspanol(fechaEfectiva)
     }
 
     val descLimpia = remember(evento.descripcion, evento.trabajadorNombre) {
@@ -1266,24 +1272,27 @@ fun ItemNotificacionSheet(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(
-                                if (evento.esHoy) Rose500.copy(alpha = 0.2f)
+                                if (esEventoHoy) Rose500.copy(alpha = 0.2f)
                                 else Slate800
                             )
                             .border(
                                 1.dp,
-                                if (evento.esHoy) Rose500.copy(alpha = 0.6f) else Slate700,
+                                if (esEventoHoy) Rose500.copy(alpha = 0.6f) else Slate700,
                                 RoundedCornerShape(8.dp)
                             )
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = when {
-                                evento.esHoy -> "¡HOY!"
-                                esEnDescanso -> "Quedan ${evento.diasRestantes}d"
-                                esPorBajar -> "Baja en ${evento.diasRestantes}d"
+                                esEnDescanso && esEventoHoy -> "Retorna mañana"
+                                esEnDescanso -> "Retorna en ${evento.diasRestantes + 1}d"
+                                esPorBajar && esEventoHoy -> "Sale hoy"
+                                esPorBajar && evento.diasRestantes == 1 -> "Sale mañana"
+                                esPorBajar -> "Sale en ${evento.diasRestantes}d"
+                                esEventoHoy -> "¡HOY!"
                                 else -> "En ${evento.diasRestantes}d"
                             },
-                            color = if (evento.esHoy) Rose500 else Slate300,
+                            color = if (esEventoHoy) Rose500 else Slate300,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1339,9 +1348,14 @@ fun ItemNotificacionSheet(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Fila 3: Descripción detallada del relevo
+            // Fila 3: Descripción simplificada y directa del relevo
+            val textoSheet = when {
+                esEnDescanso -> "Retorna a mina"
+                esPorBajar -> "Sale a descanso"
+                else -> descLimpia
+            }
             Text(
-                text = descLimpia,
+                text = textoSheet,
                 color = Slate300,
                 fontSize = 12.sp,
                 lineHeight = 16.sp
@@ -1357,12 +1371,12 @@ fun ItemNotificacionSheet(
             ) {
                 Text(
                     text = "📅 $fechaLegible",
-                    color = Slate400,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
+                    color = Slate200,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
 
-                if (evento.esHoy) {
+                if (esEventoHoy) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
@@ -1460,11 +1474,43 @@ fun MetricaBadge(
     }
 }
 
+/**
+ * Garantiza que la fecha mostrada en el Dashboard coincida exactamente con la vista Colaboradores:
+ * - Para colaboradores EN_DESCANSO: usa la fecha de retorno a taller (fechaRetorno o fechaFin + 1 día).
+ * - Para próximas salidas a descanso u otros eventos: usa la fecha de inicio / evento programado.
+ */
+fun obtenerFechaDashboard(evento: EventoNotificacionDto): String {
+    val esEnDescanso = evento.tipo == "EN_DESCANSO" || evento.tipo == "FIN_DESCANSO"
+    if (esEnDescanso) {
+        val fechaRetorno = evento.detalle?.fechaRetorno?.take(10)
+        if (!fechaRetorno.isNullOrBlank()) return fechaRetorno
+
+        val fechaFin = evento.detalle?.fechaFin?.take(10)
+        if (!fechaFin.isNullOrBlank()) {
+            return try {
+                LocalDate.parse(fechaFin).plusDays(1).toString()
+            } catch (e: Exception) {
+                evento.fecha
+            }
+        }
+    }
+    return evento.fecha
+}
+
 fun limpiarDescripcion(descripcion: String, trabajadorNombre: String): String {
     var limpia = descripcion
         .replace(Regex("""\s*\(\d{4}-\d{2}-\d{2}\)"""), "")
         .replace(Regex("""\s*\(\d{2}/\d{2}/\d{4}\)"""), "")
         .trim()
+
+    val fmtCorto = java.time.format.DateTimeFormatter.ofPattern("dd MMM", Locale.forLanguageTag("es-PE"))
+    limpia = Regex("""\b\d{4}-\d{2}-\d{2}\b""").replace(limpia) { match ->
+        try {
+            LocalDate.parse(match.value).format(fmtCorto)
+        } catch (e: Exception) {
+            match.value
+        }
+    }
 
     if (trabajadorNombre.isNotBlank() && limpia.startsWith(trabajadorNombre, ignoreCase = true)) {
         limpia = limpia.substring(trabajadorNombre.length).trimStart()
@@ -1487,9 +1533,10 @@ fun formatearFechaEspanol(fechaIso: String): String {
     return try {
         val iso = fechaIso.take(10)
         val d = LocalDate.parse(iso)
-        val diaSem = d.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, Locale("es", "PE"))
+        val localePe = Locale.forLanguageTag("es-PE")
+        val diaSem = d.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, localePe)
             .replaceFirstChar { it.uppercase() }
-        val mes = d.month.getDisplayName(java.time.format.TextStyle.FULL, Locale("es", "PE"))
+        val mes = d.month.getDisplayName(java.time.format.TextStyle.FULL, localePe)
             .replaceFirstChar { it.uppercase() }
         "$diaSem, ${d.dayOfMonth} de $mes de ${d.year}"
     } catch (e: Exception) {
@@ -1524,8 +1571,14 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
         else -> Icons.Default.Assignment
     }
 
-    val fechaLegible = remember(evento.fecha) {
-        formatearFechaEspanol(evento.fecha)
+    val fechaEfectiva = remember(evento) {
+        obtenerFechaDashboard(evento)
+    }
+
+    val esEventoHoy = evento.esHoy || evento.diasRestantes <= 0
+
+    val fechaLegible = remember(fechaEfectiva) {
+        formatearFechaEspanol(fechaEfectiva)
     }
 
     val descLimpia = remember(evento.descripcion, evento.trabajadorNombre) {
@@ -1582,24 +1635,27 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .background(
-                            if (evento.esHoy) Rose500.copy(alpha = 0.2f)
+                            if (esEventoHoy) Rose500.copy(alpha = 0.2f)
                             else Slate800
                         )
                         .border(
                             1.dp,
-                            if (evento.esHoy) Rose500.copy(alpha = 0.6f) else Slate700,
+                            if (esEventoHoy) Rose500.copy(alpha = 0.6f) else Slate700,
                             RoundedCornerShape(8.dp)
                         )
                         .padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
                     Text(
                         text = when {
-                            evento.esHoy -> "¡HOY!"
-                            esEnDescanso -> "Quedan ${evento.diasRestantes} días"
-                            esPorBajar -> "Baja en ${evento.diasRestantes} ${if (evento.diasRestantes == 1) "día" else "días"}"
+                            esEnDescanso && esEventoHoy -> "Retorna mañana"
+                            esEnDescanso -> "Retorna en ${evento.diasRestantes + 1} días"
+                            esPorBajar && esEventoHoy -> "Sale hoy"
+                            esPorBajar && evento.diasRestantes == 1 -> "Sale mañana"
+                            esPorBajar -> "Sale en ${evento.diasRestantes} días"
+                            esEventoHoy -> "¡HOY!"
                             else -> "En ${evento.diasRestantes} días"
                         },
-                        color = if (evento.esHoy) Rose500 else Slate300,
+                        color = if (esEventoHoy) Rose500 else Slate300,
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -1652,10 +1708,12 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                         )
                     }
 
-                    if (descLimpia.isNotBlank()) {
+                    // Mostrar descripción solo para ventas/permisos con motivo (evita texto largo redundante en descansos)
+                    val motivoOExtra = if (!esEnDescanso && !esPorBajar) descLimpia else evento.detalle?.motivo.orEmpty()
+                    if (motivoOExtra.isNotBlank()) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = descLimpia,
+                            text = motivoOExtra,
                             color = Slate300,
                             fontSize = 12.5.sp,
                             lineHeight = 17.5.sp
@@ -1693,10 +1751,10 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             val accionFecha = when {
-                                esEnDescanso -> "Fin de descanso / Retorno a mina"
-                                esPorBajar -> "Inicia descanso programado"
-                                esVenta -> "Labora en taller hasta"
-                                else -> "Fecha de programación"
+                                esEnDescanso -> "Retorna a mina"
+                                esPorBajar -> "Sale a descanso"
+                                esVenta -> "Venta de descanso"
+                                else -> "Permiso programado"
                             }
                             Text(
                                 text = accionFecha,
