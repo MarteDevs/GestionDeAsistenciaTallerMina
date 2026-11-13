@@ -16,7 +16,7 @@ import {
 
 interface EventoTurno {
   id: string;
-  tipo: 'INICIO_DESCANSO' | 'FIN_DESCANSO' | 'EN_DESCANSO' | 'VENTA_ACTIVA' | 'PERMISO_ACTIVO';
+  tipo: 'INICIO_DESCANSO' | 'FIN_DESCANSO' | 'EN_DESCANSO' | 'VENTA_ACTIVA' | 'PERMISO_ACTIVO' | 'RETORNO_HOY';
   trabajadorId: number;
   nombres: string;
   area: string;
@@ -125,7 +125,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
     (e) => e.tipo === 'INICIO_DESCANSO'
   );
   const proximosRetornoMina = eventosFiltrados.filter(
-    (e) => e.tipo === 'FIN_DESCANSO' || e.tipo === 'EN_DESCANSO'
+    (e) => e.tipo === 'FIN_DESCANSO' || e.tipo === 'EN_DESCANSO' || e.tipo === 'RETORNO_HOY'
   );
   const ventasActivas = eventosFiltrados.filter(
     (e) => e.tipo === 'VENTA_ACTIVA'
@@ -383,14 +383,20 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
                       </span>
                       <span
                         className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
-                          ev.diasRestantes === 0
+                          ev.tipo === 'RETORNO_HOY'
+                            ? 'bg-emerald-600 text-white'
+                            : ev.diasRestantes === 0
                             ? 'bg-cyan-600 text-white'
                             : ev.diasRestantes <= 2
                             ? 'bg-cyan-200 text-cyan-900 font-bold'
                             : 'bg-slate-200 text-slate-700'
                         }`}
                       >
-                        {ev.diasRestantes === 0 ? 'Retorna mañana' : `Retorna en ${ev.diasRestantes + 1} días`}
+                        {ev.tipo === 'RETORNO_HOY'
+                          ? '¡Ya en mina hoy!'
+                          : ev.diasRestantes === 0
+                          ? 'Retorna mañana'
+                          : `Retorna en ${ev.diasRestantes + 1} días`}
                       </span>
                     </div>
 

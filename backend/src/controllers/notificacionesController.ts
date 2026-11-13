@@ -4,7 +4,7 @@ import { ProgramacionService } from '../services/programacionService';
 
 export interface EventoTurnoProximo {
   id: string;
-  tipo: 'EN_DESCANSO' | 'INICIO_DESCANSO' | 'FIN_DESCANSO' | 'VENTA_ACTIVA' | 'PERMISO_ACTIVA' | 'PERMISO_ACTIVO';
+  tipo: 'EN_DESCANSO' | 'INICIO_DESCANSO' | 'FIN_DESCANSO' | 'VENTA_ACTIVA' | 'PERMISO_ACTIVA' | 'PERMISO_ACTIVO' | 'RETORNO_HOY';
   trabajadorId: number;
   nombres: string;
   area: string;
@@ -38,6 +38,7 @@ export class NotificacionesController {
         ? new Date(`${fechaRefQuery}T00:00:00.000Z`)
         : fechaPeru.dateUtc;
 
+      const ayerUtc = new Date(hoyUtc.getTime() - 24 * 60 * 60 * 1000);
       const limiteUtc = new Date(hoyUtc.getTime() + diasVentana * 24 * 60 * 60 * 1000);
       const fechaHoyStr = ProgramacionService.formatFechaIso(hoyUtc);
 
@@ -52,6 +53,8 @@ export class NotificacionesController {
                 { fechaInicio: { gte: hoyUtc, lte: limiteUtc } },
                 // Fines de descanso dentro de la ventana
                 { fechaFin: { gte: hoyUtc, lte: limiteUtc } },
+                // Descansos que culminaron ayer (el trabajador retorna hoy a trabajar en mina)
+                { fechaFin: { gte: ayerUtc }, fechaInicio: { lte: hoyUtc } },
                 // O descansos que están en curso actualmente
                 { fechaInicio: { lte: hoyUtc }, fechaFin: { gte: hoyUtc } },
               ],
@@ -85,6 +88,30 @@ export class NotificacionesController {
           const ffStr = ProgramacionService.formatFechaIso(new Date(dp.fechaFin));
           const fiDate = new Date(dp.fechaInicio);
           const ffDate = new Date(dp.fechaFin);
+          const subidaDate = new Date(ffDate.getTime() + 24 * 60 * 60 * 1000);
+          const subidaStr = ProgramacionService.formatFechaIso(subidaDate);
+
+          // CASO 0: El colaborador retornó a mina hoy (su descanso terminó ayer y hoy ingresó a laborar)
+          if (subidaStr === fechaHoyStr) {
+            eventos.push({
+              id: `retorno-hoy-${t.id}-${subidaStr}`,
+              tipo: 'RETORNO_HOY',
+              trabajadorId: t.id,
+              nombres: t.nombres,
+              area: t.area,
+              fechaEvento: subidaStr,
+              diasRestantes: 0,
+              esHoy: true,
+              descripcion: `${t.nombres} ya está en mina trabajando hoy (${subidaStr}).`,
+              detalle: {
+                fechaInicio: fiStr,
+                fechaFin: ffStr,
+                fechaRetorno: subidaStr,
+                cantidadDias: dp.cantidadDias,
+              },
+            });
+            continue;
+          }
 
           // CASO 1: El colaborador se encuentra ACTUALMENTE en descanso hoy
           if (fiDate <= hoyUtc && ffDate >= hoyUtc) {
@@ -96,8 +123,6 @@ export class NotificacionesController {
             }
 
             const diasParaFin = Math.round((ffDate.getTime() - hoyUtc.getTime()) / (1000 * 60 * 60 * 24));
-            const subidaDate = new Date(ffDate.getTime() + 24 * 60 * 60 * 1000);
-            const subidaStr = ProgramacionService.formatFechaIso(subidaDate);
 
             eventos.push({
               id: `descanso-activo-${t.id}-${fiStr}`,
@@ -215,7 +240,8 @@ export class NotificacionesController {
         hoy: eventos.filter((e) => e.diasRestantes === 0).length,
         proximos3Dias: eventos.filter((e) => e.diasRestantes > 0 && e.diasRestantes <= 3).length,
         iniciosDescanso: eventos.filter((e) => e.tipo === 'INICIO_DESCANSO').length,
-        finesDescanso: eventos.filter((e) => e.tipo === 'EN_DESCANSO').length,
+        finesDescanso: eventos.filter((e) => e.tipo === 'EN_DESCANSO' || e.tipo === 'RETORNO_HOY').length,
+        retornosHoy: eventos.filter((e) => e.tipo === 'RETORNO_HOY').length,
         ventas: eventos.filter((e) => e.tipo === 'VENTA_ACTIVA').length,
       };
 

@@ -299,13 +299,13 @@ fun HomeScreen(
 
                 val totalCount = uiState.eventos.size
                 val descansoCount = uiState.eventos.count { it.tipo == "EN_DESCANSO" || it.tipo == "FIN_DESCANSO" }
-                val porBajarCount = uiState.eventos.count { it.tipo == "INICIO_DESCANSO" }
+                val enMinaCount = uiState.eventos.count { it.tipo == "INICIO_DESCANSO" || it.tipo == "RETORNO_HOY" }
                 val ventasCount = uiState.eventos.count { it.tipo == "VENTA_ACTIVA" || it.tipo == "PERMISO_ACTIVO" }
 
                 val eventosFiltrados = remember(selectedTab, uiState.eventos) {
                     when (selectedTab) {
                         "EN_DESCANSO" -> uiState.eventos.filter { it.tipo == "EN_DESCANSO" || it.tipo == "FIN_DESCANSO" }
-                        "POR_BAJAR" -> uiState.eventos.filter { it.tipo == "INICIO_DESCANSO" }
+                        "EN_MINA", "POR_BAJAR" -> uiState.eventos.filter { it.tipo == "INICIO_DESCANSO" || it.tipo == "RETORNO_HOY" }
                         "VENTAS" -> uiState.eventos.filter { it.tipo == "VENTA_ACTIVA" || it.tipo == "PERMISO_ACTIVO" }
                         else -> uiState.eventos
                     }
@@ -426,8 +426,8 @@ fun HomeScreen(
                                         modifier = Modifier.weight(1f)
                                     )
                                     MetricaBadge(
-                                        titulo = "Por Bajar",
-                                        valor = porBajarCount.toString(),
+                                        titulo = "En Mina",
+                                        valor = enMinaCount.toString(),
                                         color = Amber400,
                                         modifier = Modifier.weight(1f)
                                     )
@@ -471,12 +471,12 @@ fun HomeScreen(
                             }
                             item {
                                 FiltroChip(
-                                    texto = "Por Bajar",
-                                    conteo = porBajarCount,
-                                    seleccionado = selectedTab == "POR_BAJAR",
+                                    texto = "En Mina",
+                                    conteo = enMinaCount,
+                                    seleccionado = selectedTab == "EN_MINA" || selectedTab == "POR_BAJAR",
                                     colorActivo = Amber400,
-                                    icon = Icons.Default.FlightTakeoff,
-                                    onClick = { selectedTab = "POR_BAJAR" }
+                                    icon = Icons.Default.Construction,
+                                    onClick = { selectedTab = "EN_MINA" }
                                 )
                             }
                             item {
@@ -497,7 +497,7 @@ fun HomeScreen(
                         Text(
                             text = when (selectedTab) {
                                 "EN_DESCANSO" -> "PERSONAL EN DESCANSO PROGRAMADO (${eventosFiltrados.size})"
-                                "POR_BAJAR" -> "PRÓXIMAS SALIDAS A DESCANSO (${eventosFiltrados.size})"
+                                "EN_MINA", "POR_BAJAR" -> "COLABORADORES EN MINA (${eventosFiltrados.size})"
                                 "VENTAS" -> "VENTAS DE DESCANSO ACTIVAS (${eventosFiltrados.size})"
                                 else -> "TODOS LOS RELEVOS EN VENTANA (${eventosFiltrados.size})"
                             },
@@ -1186,11 +1186,13 @@ fun ItemNotificacionSheet(
     evento: EventoNotificacionDto,
     onDescartar: () -> Unit
 ) {
+    val esRetornoHoy = evento.tipo == "RETORNO_HOY"
     val esEnDescanso = evento.tipo == "EN_DESCANSO" || evento.tipo == "FIN_DESCANSO"
     val esPorBajar = evento.tipo == "INICIO_DESCANSO"
     val esVenta = evento.tipo == "VENTA_ACTIVA"
 
     val badgeColor = when {
+        esRetornoHoy -> Emerald500
         esEnDescanso -> Violet500
         esPorBajar -> Amber400
         esVenta -> Emerald500
@@ -1198,15 +1200,17 @@ fun ItemNotificacionSheet(
     }
 
     val badgeLabel = when {
+        esRetornoHoy -> "Ya en Mina"
         esEnDescanso -> "Retorno a Mina"
-        esPorBajar -> "Salida a Descanso"
+        esPorBajar -> "En Mina"
         esVenta -> "Venta de Descanso"
         else -> "Permiso Especial"
     }
 
     val iconVector = when {
+        esRetornoHoy -> Icons.Default.Construction
         esEnDescanso -> Icons.Default.Bedtime
-        esPorBajar -> Icons.Default.FlightTakeoff
+        esPorBajar -> Icons.Default.Construction
         esVenta -> Icons.Default.Paid
         else -> Icons.Default.Assignment
     }
@@ -1284,15 +1288,16 @@ fun ItemNotificacionSheet(
                     ) {
                         Text(
                             text = when {
+                                esRetornoHoy -> "¡Laborando hoy!"
                                 esEnDescanso && esEventoHoy -> "Retorna mañana"
                                 esEnDescanso -> "Retorna en ${evento.diasRestantes + 1}d"
-                                esPorBajar && esEventoHoy -> "Sale hoy"
-                                esPorBajar && evento.diasRestantes == 1 -> "Sale mañana"
-                                esPorBajar -> "Sale en ${evento.diasRestantes}d"
+                                esPorBajar && esEventoHoy -> "Baja hoy"
+                                esPorBajar && evento.diasRestantes == 1 -> "Baja mañana"
+                                esPorBajar -> "Baja en ${evento.diasRestantes}d"
                                 esEventoHoy -> "¡HOY!"
                                 else -> "En ${evento.diasRestantes}d"
                             },
-                            color = if (esEventoHoy) Rose500 else Slate300,
+                            color = if (esRetornoHoy) Emerald500 else if (esEventoHoy) Rose500 else Slate300,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1350,8 +1355,9 @@ fun ItemNotificacionSheet(
 
             // Fila 3: Descripción simplificada y directa del relevo
             val textoSheet = when {
+                esRetornoHoy -> "Trabajando en mina"
                 esEnDescanso -> "Retorna a mina"
-                esPorBajar -> "Sale a descanso"
+                esPorBajar -> "Próx. descanso"
                 else -> descLimpia
             }
             Text(
@@ -1480,6 +1486,9 @@ fun MetricaBadge(
  * - Para próximas salidas a descanso u otros eventos: usa la fecha de inicio / evento programado.
  */
 fun obtenerFechaDashboard(evento: EventoNotificacionDto): String {
+    if (evento.tipo == "RETORNO_HOY") {
+        return evento.fecha
+    }
     val esEnDescanso = evento.tipo == "EN_DESCANSO" || evento.tipo == "FIN_DESCANSO"
     if (esEnDescanso) {
         val fechaRetorno = evento.detalle?.fechaRetorno?.take(10)
@@ -1546,11 +1555,13 @@ fun formatearFechaEspanol(fechaIso: String): String {
 
 @Composable
 fun EventoItemCard(evento: EventoNotificacionDto) {
+    val esRetornoHoy = evento.tipo == "RETORNO_HOY"
     val esEnDescanso = evento.tipo == "EN_DESCANSO" || evento.tipo == "FIN_DESCANSO"
     val esPorBajar = evento.tipo == "INICIO_DESCANSO"
     val esVenta = evento.tipo == "VENTA_ACTIVA"
 
     val badgeColor = when {
+        esRetornoHoy -> Emerald500
         esEnDescanso -> Violet500
         esPorBajar -> Amber400
         esVenta -> Emerald500
@@ -1558,15 +1569,17 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
     }
 
     val badgeLabel = when {
+        esRetornoHoy -> "Ya en Mina"
         esEnDescanso -> "En Descanso"
-        esPorBajar -> "Por Bajar"
+        esPorBajar -> "En Mina"
         esVenta -> "Venta Activa"
         else -> "Permiso Especial"
     }
 
     val iconVector = when {
+        esRetornoHoy -> Icons.Default.Construction
         esEnDescanso -> Icons.Default.Bedtime
-        esPorBajar -> Icons.Default.FlightTakeoff
+        esPorBajar -> Icons.Default.Construction
         esVenta -> Icons.Default.Paid
         else -> Icons.Default.Assignment
     }
@@ -1647,15 +1660,16 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                 ) {
                     Text(
                         text = when {
+                            esRetornoHoy -> "¡Trabajando hoy!"
                             esEnDescanso && esEventoHoy -> "Retorna mañana"
                             esEnDescanso -> "Retorna en ${evento.diasRestantes + 1} días"
-                            esPorBajar && esEventoHoy -> "Sale hoy"
-                            esPorBajar && evento.diasRestantes == 1 -> "Sale mañana"
-                            esPorBajar -> "Sale en ${evento.diasRestantes} días"
+                            esPorBajar && esEventoHoy -> "Baja hoy"
+                            esPorBajar && evento.diasRestantes == 1 -> "Baja mañana"
+                            esPorBajar -> "Baja en ${evento.diasRestantes} días"
                             esEventoHoy -> "¡HOY!"
                             else -> "En ${evento.diasRestantes} días"
                         },
-                        color = if (esEventoHoy) Rose500 else Slate300,
+                        color = if (esRetornoHoy) Emerald500 else if (esEventoHoy) Rose500 else Slate300,
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -1709,7 +1723,7 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                     }
 
                     // Mostrar descripción solo para ventas/permisos con motivo (evita texto largo redundante en descansos)
-                    val motivoOExtra = if (!esEnDescanso && !esPorBajar) descLimpia else evento.detalle?.motivo.orEmpty()
+                    val motivoOExtra = if (!esEnDescanso && !esPorBajar && !esRetornoHoy) descLimpia else evento.detalle?.motivo.orEmpty()
                     if (motivoOExtra.isNotBlank()) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
@@ -1751,8 +1765,9 @@ fun EventoItemCard(evento: EventoNotificacionDto) {
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             val accionFecha = when {
+                                esRetornoHoy -> "Trabajando en mina"
                                 esEnDescanso -> "Retorna a mina"
-                                esPorBajar -> "Sale a descanso"
+                                esPorBajar -> "Próx. descanso"
                                 esVenta -> "Venta de descanso"
                                 else -> "Permiso programado"
                             }
