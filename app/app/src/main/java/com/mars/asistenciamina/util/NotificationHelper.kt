@@ -28,6 +28,11 @@ object NotificationHelper {
 
     private val URGENT_VIBRATION_PATTERN = longArrayOf(0, 450, 180, 450, 180, 600)
 
+    // Agrupa todas las alertas de una misma corrida bajo un resumen: Android ya no las
+    // apila genéricamente ("AsistenciaMina • 2") sino bajo una tarjeta propia con conteo.
+    private const val GROUP_KEY_RELEVOS = "com.mars.asistenciamina.GRUPO_RELEVOS"
+    private const val NOTIF_ID_RESUMEN = 1000
+
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager: NotificationManager =
@@ -81,13 +86,18 @@ object NotificationHelper {
         }
     }
 
+    /**
+     * @param lineas Nombres de los colaboradores incluidos en esta alerta. Con más de uno,
+     * se listan en un `InboxStyle` expandible en vez de un solo texto corrido difícil de leer.
+     */
     fun sendShiftNotification(
         context: Context,
         notificationId: Int,
         title: String,
         message: String,
         channelId: String = CHANNEL_ID_REGULAR,
-        isUrgent: Boolean = false
+        isUrgent: Boolean = false,
+        lineas: List<String>? = null
     ) {
         if (!hasNotificationPermission(context)) return
 
@@ -105,11 +115,20 @@ object NotificationHelper {
 
         val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
+        val estilo = if (lineas != null && lineas.size > 1) {
+            NotificationCompat.InboxStyle().also { style ->
+                lineas.forEach { style.addLine(it) }
+            }.setSummaryText(message)
+        } else {
+            NotificationCompat.BigTextStyle().bigText(message)
+        }
+
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(com.mars.asistenciamina.R.drawable.ic_logo_asistencia_mina)
             .setContentTitle(title)
             .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setStyle(estilo)
+            .setGroup(GROUP_KEY_RELEVOS)
             .setPriority(if (isUrgent) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_HIGH)
             .setSound(soundUri)
             .setVibrate(if (isUrgent) URGENT_VIBRATION_PATTERN else longArrayOf(0, 250, 150, 250))
@@ -119,6 +138,24 @@ object NotificationHelper {
 
         try {
             NotificationManagerCompat.from(context).notify(notificationId, builder.build())
+        } catch (e: SecurityException) {
+            // Permiso no concedido por el usuario
+        }
+    }
+
+    /** Tarjeta resumen del grupo: evita que Android apile las alertas de forma genérica. */
+    private fun enviarResumenGrupo(context: Context, totalAlertas: Int) {
+        if (totalAlertas == 0 || !hasNotificationPermission(context)) return
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID_REGULAR)
+            .setSmallIcon(com.mars.asistenciamina.R.drawable.ic_logo_asistencia_mina)
+            .setContentTitle("Relevos de hoy")
+            .setContentText(if (totalAlertas == 1) "1 alerta de turno" else "$totalAlertas alertas de turno")
+            .setGroup(GROUP_KEY_RELEVOS)
+            .setGroupSummary(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+        try {
+            NotificationManagerCompat.from(context).notify(NOTIF_ID_RESUMEN, builder.build())
         } catch (e: SecurityException) {
             // Permiso no concedido por el usuario
         }
@@ -136,82 +173,104 @@ object NotificationHelper {
         SessionManager.init(context)
         SessionManager.registrarAlertaSonada()
 
-        // 1. EVENTOS DE HOY (Día 0 - MÁXIMA PRIORIDAD Y SONIDO ESPECIAL)
-        val salidasHoy = eventos.filter { it.diasRestantes == 0 && it.tipo == "INICIO_DESCANSO" }
-        if (salidasHoy.isNotEmpty()) {
-            val nombres = salidasHoy.joinToString(", ") { it.trabajadorNombre }
-            val titulo = if (salidasHoy.size == 1) "¡HOY CULMINA TU GUARDIA!" else "¡HOY ${salidasHoy.size} RELEVOS A DESCANSO!"
-            val mensaje = "Hoy culmina la guardia de 30 días en mina e inicia el descanso de 10 días: $nombres."
-            sendShiftNotification(context, 1001, titulo, mensaje, CHANNEL_ID_URGENT, isUrgent = true)
+        var totalAlertas = 0
+
+        // Quien ve estas alertas es un supervisor monitoreando a varios colaboradores, no el
+        // propio trabajador — por eso todo va en 3ra persona y con el nombre primero, nunca "tu
+        // descanso". Con 1 solo colaborador el nombre va en el título; con varios, cada quien
+        // aparece en su propia línea (InboxStyle) en vez de una sola oración con comas.
+        fun enviarAlerta(
+            notificationId: Int,
+            emoji: String,
+            tituloSingular: (String) -> String,
+            tituloPlural: (Int) -> String,
+            mensaje: String,
+            channelId: String,
+            isUrgent: Boolean,
+            eventosGrupo: List<EventoNotificacionDto>
+        ) {
+            if (eventosGrupo.isEmpty()) return
+            val nombres = eventosGrupo.map { it.trabajadorNombre }
+            val titulo = if (nombres.size == 1) "$emoji ${tituloSingular(nombres[0])}" else "$emoji ${tituloPlural(nombres.size)}"
+            sendShiftNotification(
+                context, notificationId, titulo, mensaje, channelId, isUrgent,
+                lineas = if (nombres.size > 1) nombres else null
+            )
+            totalAlertas += eventosGrupo.size
         }
+
+        // 1. EVENTOS DE HOY (Día 0 - MÁXIMA PRIORIDAD Y SONIDO ESPECIAL)
+        enviarAlerta(
+            1001, "🌙",
+            { "$it baja a descanso hoy" }, { "$it bajan a descanso hoy" },
+            "Culmina guardia de 30 días en mina e inicia descanso de 10 días.",
+            CHANNEL_ID_URGENT, isUrgent = true,
+            eventos.filter { it.diasRestantes == 0 && it.tipo == "INICIO_DESCANSO" }
+        )
 
         // El descanso ya terminó: el colaborador está hoy en mina trabajando (tipo propio del backend,
         // no debe confundirse con "EN_DESCANSO", que todavía sigue de descanso hoy).
-        val yaEnMinaHoy = eventos.filter { it.tipo == "RETORNO_HOY" }
-        if (yaEnMinaHoy.isNotEmpty()) {
-            val nombres = yaEnMinaHoy.joinToString(", ") { it.trabajadorNombre }
-            val titulo = if (yaEnMinaHoy.size == 1) "¡Hoy te toca trabajar!" else "¡Hoy ${yaEnMinaHoy.size} vuelven a trabajar!"
-            val mensaje = "Terminó su descanso e ingresó hoy a laborar en Taller Mina: $nombres."
-            sendShiftNotification(context, 1002, titulo, mensaje, CHANNEL_ID_URGENT, isUrgent = true)
-        }
+        enviarAlerta(
+            1002, "⛏️",
+            { "$it ya está en mina trabajando" }, { "$it ya están en mina trabajando" },
+            "Terminó su descanso e ingresó hoy a laborar en Taller Mina.",
+            CHANNEL_ID_URGENT, isUrgent = true,
+            eventos.filter { it.tipo == "RETORNO_HOY" }
+        )
 
         // 2. EVENTOS DE MAÑANA (Falta 1 Día)
-        val salidasManana = eventos.filter { it.diasRestantes == 1 && it.tipo == "INICIO_DESCANSO" }
-        if (salidasManana.isNotEmpty()) {
-            val nombres = salidasManana.joinToString(", ") { it.trabajadorNombre }
-            val titulo = "Falta 1 Día: ¡Mañana sales a descanso!"
-            val mensaje = "Prepara el relevo en mina. Mañana inicia el periodo de descanso: $nombres."
-            sendShiftNotification(context, 1003, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
-        }
+        enviarAlerta(
+            1003, "🌙",
+            { "$it baja a descanso mañana" }, { "$it bajan a descanso mañana" },
+            "Culmina guardia de 30 días mañana e inicia descanso de 10 días.",
+            CHANNEL_ID_REGULAR, isUrgent = false,
+            eventos.filter { it.diasRestantes == 1 && it.tipo == "INICIO_DESCANSO" }
+        )
 
         // "EN_DESCANSO" con diasRestantes = días que faltan para el día de FIN (pizarra). El día de
-        // trabajo real (INGRESA) es uno después y tiene su propia alerta aparte: "yaEnMinaHoy".
-        val descansoTerminaHoy = eventos.filter { it.diasRestantes == 0 && it.tipo == "EN_DESCANSO" }
-        if (descansoTerminaHoy.isNotEmpty()) {
-            val nombres = descansoTerminaHoy.joinToString(", ") { it.trabajadorNombre }
-            val titulo = "¡Hoy termina tu descanso!"
-            val mensaje = "Hoy es tu último día de descanso. Mañana ingresas a trabajar a Taller Mina: $nombres."
-            sendShiftNotification(context, 1004, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
-        }
+        // trabajo real (INGRESA) es uno después y tiene su propia alerta aparte (id 1002).
+        enviarAlerta(
+            1004, "⛏️",
+            { "$it termina su descanso hoy" }, { "$it terminan su descanso hoy" },
+            "Último día de descanso. Mañana ingresa a trabajar a Taller Mina.",
+            CHANNEL_ID_REGULAR, isUrgent = false,
+            eventos.filter { it.diasRestantes == 0 && it.tipo == "EN_DESCANSO" }
+        )
 
         // 3. EVENTOS DE 2 DÍAS (Faltan 2 Días)
-        val salidasDosDias = eventos.filter { it.diasRestantes == 2 && it.tipo == "INICIO_DESCANSO" }
-        if (salidasDosDias.isNotEmpty()) {
-            val nombres = salidasDosDias.joinToString(", ") { it.trabajadorNombre }
-            val titulo = "Faltan 2 Días para tu descanso"
-            val mensaje = "Estás a 48 horas de finalizar guardia e iniciar tus 10 días libres: $nombres."
-            sendShiftNotification(context, 1005, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
-        }
+        enviarAlerta(
+            1005, "🌙",
+            { "Faltan 2 días para el descanso de $it" }, { "Faltan 2 días para el descanso de $it colaboradores" },
+            "Finaliza guardia en 48 horas e inicia descanso de 10 días.",
+            CHANNEL_ID_REGULAR, isUrgent = false,
+            eventos.filter { it.diasRestantes == 2 && it.tipo == "INICIO_DESCANSO" }
+        )
 
-        val descansoTerminaManana = eventos.filter { it.diasRestantes == 1 && it.tipo == "EN_DESCANSO" }
-        if (descansoTerminaManana.isNotEmpty()) {
-            val nombres = descansoTerminaManana.joinToString(", ") { it.trabajadorNombre }
-            val titulo = "Mañana termina tu descanso"
-            val mensaje = "Tu descanso termina mañana. Al día siguiente ingresas a trabajar a Taller Mina: $nombres."
-            sendShiftNotification(context, 1006, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
-        }
+        enviarAlerta(
+            1006, "⛏️",
+            { "Faltan 2 días para que regrese $it" }, { "Faltan 2 días para que regresen $it colaboradores" },
+            "Termina su descanso mañana; al día siguiente ingresa a trabajar.",
+            CHANNEL_ID_REGULAR, isUrgent = false,
+            eventos.filter { it.diasRestantes == 1 && it.tipo == "EN_DESCANSO" }
+        )
 
         // 4. EVENTOS DE PERMISO O VACACIONES ESPECIALES
-        val permisosHoy = eventos.filter { it.diasRestantes == 0 && it.tipo == "PERMISO_ACTIVO" }
-        if (permisosHoy.isNotEmpty()) {
-            val nombres = permisosHoy.joinToString(", ") { it.trabajadorNombre }
-            sendShiftNotification(
-                context, 1007,
-                "¡Permiso / Vacaciones Hoy!",
-                "Inicia periodo de permiso o descanso autorizado: $nombres.",
-                CHANNEL_ID_REGULAR, isUrgent = false
-            )
-        }
+        enviarAlerta(
+            1007, "🏖️",
+            { "$it tiene permiso hoy" }, { "$it tienen permiso hoy" },
+            "Inicia periodo de permiso o descanso autorizado.",
+            CHANNEL_ID_REGULAR, isUrgent = false,
+            eventos.filter { it.diasRestantes == 0 && it.tipo == "PERMISO_ACTIVO" }
+        )
 
-        val permisosProximos = eventos.filter { (it.diasRestantes in 1..2) && it.tipo == "PERMISO_ACTIVO" }
-        if (permisosProximos.isNotEmpty()) {
-            val nombres = permisosProximos.joinToString(", ") { "${it.trabajadorNombre} (en ${it.diasRestantes}d)" }
-            sendShiftNotification(
-                context, 1008,
-                "Próximo Permiso / Vacaciones",
-                "Permiso programado en las próximas 48 horas: $nombres.",
-                CHANNEL_ID_REGULAR, isUrgent = false
-            )
-        }
+        enviarAlerta(
+            1008, "🏖️",
+            { "Próximo permiso de $it" }, { "Próximo permiso de $it colaboradores" },
+            "Permiso programado en las próximas 48 horas.",
+            CHANNEL_ID_REGULAR, isUrgent = false,
+            eventos.filter { (it.diasRestantes in 1..2) && it.tipo == "PERMISO_ACTIVO" }
+        )
+
+        enviarResumenGrupo(context, totalAlertas)
     }
 }
