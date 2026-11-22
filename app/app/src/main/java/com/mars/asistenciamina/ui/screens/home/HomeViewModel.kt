@@ -34,6 +34,16 @@ class HomeViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    // Vive en el ViewModel (no en un rememberSaveable del Composable) porque AnimatedContent en
+    // MainActivity descompone HomeScreen al cambiar de pestaña sin un SaveableStateHolder: el
+    // rememberSaveable se perdia y las notificaciones se repetian cada vez que volvias al dashboard.
+    var yaNotificadoEstaSesion: Boolean = false
+        private set
+
+    fun marcarNotificado() {
+        yaNotificadoEstaSesion = true
+    }
+
     private fun getFechaHoyIso(): String {
         val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         return sdf.format(Date())

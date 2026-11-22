@@ -120,7 +120,6 @@ fun HomeScreen(
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     val usuarioActual = remember { SessionManager.getUser() }
-    var yaNotificado by rememberSaveable { mutableStateOf(false) }
     var showConfigModal by rememberSaveable { mutableStateOf(false) }
     var showNotificationsModal by rememberSaveable { mutableStateOf(false) }
     val descartadasIds = (state as? HomeUiState.Success)?.descartadas ?: SessionManager.getDescartadasIds()
@@ -133,11 +132,11 @@ fun HomeScreen(
 
     // Si hay eventos cargados, notificar automáticamente en la barra de notificaciones una sola vez por sesión
     LaunchedEffect(state) {
-        if (state is HomeUiState.Success && !yaNotificado) {
+        if (state is HomeUiState.Success && !viewModel.yaNotificadoEstaSesion) {
             val eventos = (state as HomeUiState.Success).eventos
             if (eventos.isNotEmpty()) {
                 NotificationHelper.notifyUpcomingShifts(context, eventos)
-                yaNotificado = true
+                viewModel.marcarNotificado()
             }
         }
     }
