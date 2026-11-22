@@ -54,8 +54,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.layout.RowScope
 import com.mars.asistenciamina.data.models.TrabajadorDto
 import com.mars.asistenciamina.ui.components.SkeletonItem
+import com.mars.asistenciamina.ui.screens.home.formatearFechaPizarra
+import com.mars.asistenciamina.ui.screens.home.obtenerFilaWhiteboard
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Construction
@@ -372,6 +375,9 @@ fun CardTrabajadorItem(
     val estado = remember(trabajador.id, trabajador.descansos) {
         obtenerEstadoOperativo(trabajador.descansos)
     }
+    val filaPizarra = remember(trabajador.id, trabajador.descansos) {
+        obtenerFilaWhiteboard(trabajador)
+    }
 
     Card(
         modifier = Modifier
@@ -481,7 +487,8 @@ fun CardTrabajadorItem(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Fila 3: Detalle Operativo en contenedor oscuro
+            // Fila 3: mismo desglose INICIO/FIN/INGRESA que la pizarra del dashboard,
+            // en vez de un solo texto combinado ("Retorna a taller: 20 Nov").
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -490,38 +497,67 @@ fun CardTrabajadorItem(
                     .border(1.dp, Slate800, RoundedCornerShape(12.dp))
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
+                if (filaPizarra != null) {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        MiniFechaTrabajador(etiqueta = "INICIO", valor = formatearFechaPizarra(filaPizarra.inicio), color = Slate200)
+                        MiniFechaTrabajador(etiqueta = "FIN", valor = formatearFechaPizarra(filaPizarra.fin), color = Slate200)
+                        MiniFechaTrabajador(etiqueta = "INGRESA", valor = formatearFechaPizarra(filaPizarra.ingresa), color = estado.colorEstado, destacado = true)
                         Icon(
-                            imageVector = Icons.Default.EventAvailable,
+                            imageVector = Icons.Default.ChevronRight,
                             contentDescription = null,
-                            tint = Amber400,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = estado.detalleFechas,
-                            color = Slate200,
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.SemiBold
+                            tint = Slate600,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = Slate600,
-                        modifier = Modifier.size(18.dp)
-                    )
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(
+                                imageVector = Icons.Default.EventAvailable,
+                                contentDescription = null,
+                                tint = Amber400,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = estado.detalleFechas,
+                                color = Slate200,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = Slate600,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RowScope.MiniFechaTrabajador(etiqueta: String, valor: String, color: Color, destacado: Boolean = false) {
+    Column(modifier = Modifier.weight(1f)) {
+        Text(
+            text = etiqueta,
+            color = Slate400,
+            fontSize = 8.5.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 0.4.sp
+        )
+        Text(
+            text = valor,
+            color = color,
+            fontSize = if (destacado) 13.sp else 11.5.sp,
+            fontWeight = if (destacado) FontWeight.Black else FontWeight.SemiBold
+        )
     }
 }
