@@ -10,7 +10,8 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
-  Briefcase
+  Briefcase,
+  LogIn
 } from 'lucide-react';
 
 interface EventoTurno {
@@ -86,6 +87,23 @@ function sumarDiasIso(fechaIso: string, dias: number): string {
   return fecha.toISOString().slice(0, 10);
 }
 
+type EstadoPizarra = 'REGRESAN' | 'DESCANSO' | 'EN_MINA';
+
+/** Urgente (regresa hoy/mañana) > en descanso > en mina, mismo criterio que la app móvil. */
+function obtenerEstadoPizarra(fila: FilaPizarra, fechaReferencia: string): EstadoPizarra {
+  const ingresaProximo =
+    fila.ingresa >= fechaReferencia && fila.ingresa <= sumarDiasIso(fechaReferencia, 1);
+  if (ingresaProximo) return 'REGRESAN';
+  return fila.enDescanso ? 'DESCANSO' : 'EN_MINA';
+}
+
+// El color por sí solo no basta (WCAG 1.4.1): cada estado también lleva su propio ícono.
+const GRUPOS_PIZARRA: Record<EstadoPizarra, { titulo: string; Icono: typeof Moon; claseTexto: string; clasePunto: string }> = {
+  REGRESAN: { titulo: 'Regresan a mina', Icono: LogIn, claseTexto: 'text-emerald-600', clasePunto: 'bg-emerald-500' },
+  DESCANSO: { titulo: 'En descanso', Icono: Moon, claseTexto: 'text-violet-600', clasePunto: 'bg-violet-500' },
+  EN_MINA: { titulo: 'En mina trabajando', Icono: Briefcase, claseTexto: 'text-amber-600', clasePunto: 'bg-amber-500' }
+};
+
 /**
  * Misma regla de selección que usa el backend/móvil: el descanso activo hoy, si no
  * el que terminó ayer (día de retorno a mina), si no el próximo programado. Fechas
@@ -129,6 +147,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState<string>('');
   const [filtroArea, setFiltroArea] = useState<string>('TODAS');
+  const [filtroEstado, setFiltroEstado] = useState<EstadoPizarra | 'TODOS'>('TODOS');
   const [fechaReferencia, setFechaReferencia] = useState<string>(() => {
     // Formato YYYY-MM-DD local
     const now = new Date();
@@ -183,7 +202,7 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
   }, [token, fechaReferencia]);
 
   // Tablero tipo pizarra: una fila por colaborador con su periodo vigente (NOMBRE | INICIO | FIN | INGRESA)
-  const filasPizarra = trabajadores
+  const filasPizarraBase = trabajadores
     .map((t) => obtenerFilaPizarra(t, fechaReferencia))
     .filter((f): f is FilaPizarra => f !== null)
     .filter((f) => {
@@ -195,6 +214,12 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
       return coincideTexto && coincideArea;
     })
     .sort((a, b) => a.nombres.localeCompare(b.nombres));
+
+  const gruposPizarra = (Object.keys(GRUPOS_PIZARRA) as EstadoPizarra[]).map((estado) => ({
+    estado,
+    ...GRUPOS_PIZARRA[estado],
+    filas: filasPizarraBase.filter((f) => obtenerEstadoPizarra(f, fechaReferencia) === estado)
+  }));
 
   return (
     <div className="w-full space-y-5 animate-in fade-in duration-200">
@@ -357,6 +382,34 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {/* Filtro por estado: oculta secciones completas, no solo filas sueltas */}
+          <div className="flex flex-wrap items-center gap-2 px-2.5 sm:px-4 py-3 bg-slate-50 border-b border-slate-200">
+            <button
+              onClick={() => setFiltroEstado('TODOS')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${
+                filtroEstado === 'TODOS'
+                  ? 'bg-slate-800 text-white border-slate-800'
+                  : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              Todos ({filasPizarraBase.length})
+            </button>
+            {gruposPizarra.map(({ estado, titulo, Icono, claseTexto }) => (
+              <button
+                key={estado}
+                onClick={() => setFiltroEstado(estado)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${
+                  filtroEstado === estado
+                    ? `bg-white border-current ${claseTexto}`
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <Icono className="w-3 h-3" />
+                {titulo} ({gruposPizarra.find((g) => g.estado === estado)?.filas.length ?? 0})
+              </button>
+            ))}
+          </div>
+
           {/* Encabezado tipo pizarra física: COLABORADOR | INICIO | FIN | INGRESA.
               INGRESA resaltada en ámbar: es la columna que realmente hay que decidir de un vistazo. */}
           <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] sm:grid-cols-[2fr_1fr_1fr_1fr] gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-3 bg-slate-50 border-b-2 border-amber-200">
@@ -374,50 +427,47 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
             </span>
           </div>
 
-          {filasPizarra.length === 0 ? (
+          {filasPizarraBase.length === 0 ? (
             <div className="text-center py-14 text-slate-400 text-xs">
               <CheckCircle2 className="w-6 h-6 mx-auto mb-1.5 text-slate-300" />
               No hay colaboradores con periodos 30x10 registrados.
             </div>
           ) : (
-            filasPizarra.map((fila, idx) => {
-              const ingresaProximo =
-                fila.ingresa >= fechaReferencia &&
-                fila.ingresa <= sumarDiasIso(fechaReferencia, 1);
-              // Urgente > en descanso > en mina, igual criterio que la app móvil
-              const colorEstado = ingresaProximo
-                ? 'text-emerald-600'
-                : fila.enDescanso
-                ? 'text-violet-600'
-                : 'text-amber-600';
-              const colorPunto = ingresaProximo
-                ? 'bg-emerald-500'
-                : fila.enDescanso
-                ? 'bg-violet-500'
-                : 'bg-amber-500';
+            gruposPizarra.map(({ estado, titulo, Icono, claseTexto, clasePunto, filas }) => {
+              if (filtroEstado !== 'TODOS' && filtroEstado !== estado) return null;
+              if (filas.length === 0) return null;
               return (
-                <div
-                  key={fila.trabajadorId}
-                  className={`grid grid-cols-[1.6fr_1fr_1fr_1fr] sm:grid-cols-[2fr_1fr_1fr_1fr] gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 items-center ${
-                    idx !== filasPizarra.length - 1 ? 'border-b border-rose-200/60' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${colorPunto}`} />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 truncate">{fila.nombres}</p>
-                      <p className="text-[10px] text-slate-400 truncate">{fila.area}</p>
-                    </div>
+                <div key={estado}>
+                  <div className={`flex items-center gap-2 px-2.5 sm:px-4 py-1.5 bg-slate-50/80 ${claseTexto}`}>
+                    <Icono className="w-3 h-3" />
+                    <span className="text-[10px] font-black uppercase tracking-wider flex-1">{titulo}</span>
+                    <span className="text-[10px] font-black">{filas.length}</span>
                   </div>
-                  <span className="text-center text-xs font-semibold text-slate-700 font-mono">
-                    {formatFechaPizarra(fila.inicio)}
-                  </span>
-                  <span className="text-center text-xs font-semibold text-slate-700 font-mono">
-                    {formatFechaPizarra(fila.fin)}
-                  </span>
-                  <span className={`text-center text-xs font-black font-mono ${colorEstado}`}>
-                    {formatFechaPizarra(fila.ingresa)}
-                  </span>
+                  {filas.map((fila, idx) => (
+                    <div
+                      key={fila.trabajadorId}
+                      className={`grid grid-cols-[1.6fr_1fr_1fr_1fr] sm:grid-cols-[2fr_1fr_1fr_1fr] gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 items-center ${
+                        idx !== filas.length - 1 ? 'border-b border-rose-200/60' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${clasePunto}`} />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900 truncate">{fila.nombres}</p>
+                          <p className="text-[10px] text-slate-400 truncate">{fila.area}</p>
+                        </div>
+                      </div>
+                      <span className="text-center text-xs font-semibold text-slate-700 font-mono">
+                        {formatFechaPizarra(fila.inicio)}
+                      </span>
+                      <span className="text-center text-xs font-semibold text-slate-700 font-mono">
+                        {formatFechaPizarra(fila.fin)}
+                      </span>
+                      <span className={`text-center text-xs font-black font-mono ${claseTexto}`}>
+                        {formatFechaPizarra(fila.ingresa)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               );
             })

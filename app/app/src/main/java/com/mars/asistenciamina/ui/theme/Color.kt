@@ -22,4 +22,5 @@ val Amber600 = Color(0xFFD97706)
 val Emerald500 = Color(0xFF10B981) // Descanso Libre (DL)
 val Cyan500    = Color(0xFF06B6D4) // Retorno a Mina
 val Violet500  = Color(0xFF8B5CF6) // Bloque Libre
+val Violet400  = Color(0xFFA78BFA) // Uso en texto: Violet500 da 4.2:1 sobre Slate900 (bajo AA 4.5:1)
 val Rose500    = Color(0xFFF43F5E) // Permiso / Adelanto (P)

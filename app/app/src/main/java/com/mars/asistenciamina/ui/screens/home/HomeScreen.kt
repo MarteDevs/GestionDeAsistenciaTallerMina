@@ -2,6 +2,9 @@ package com.mars.asistenciamina.ui.screens.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -65,6 +68,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -79,6 +83,7 @@ import com.mars.asistenciamina.ui.theme.Amber400
 import com.mars.asistenciamina.ui.theme.Amber500
 import com.mars.asistenciamina.ui.theme.Emerald500
 import com.mars.asistenciamina.ui.theme.Rose500
+import com.mars.asistenciamina.ui.theme.Violet400
 import com.mars.asistenciamina.ui.theme.Violet500
 import com.mars.asistenciamina.ui.theme.Slate200
 import com.mars.asistenciamina.ui.theme.Slate300
@@ -1505,6 +1510,24 @@ private val MESES_CORTOS_PIZARRA = arrayOf(
 fun formatearFechaPizarra(fecha: LocalDate): String =
     "%02d-%s".format(fecha.dayOfMonth, MESES_CORTOS_PIZARRA[fecha.monthValue - 1])
 
+/** Filtro de estado del tablero. TODOS no oculta nada; el resto muestra solo esa sección. */
+private enum class FiltroPizarra { TODOS, REGRESAN, DESCANSO, EN_MINA }
+
+private data class GrupoPizarra(
+    val filtro: FiltroPizarra,
+    val titulo: String,
+    val color: Color,
+    val icono: ImageVector,
+    val filas: List<FilaWhiteboard>
+)
+
+/**
+ * Texto vs. relleno: Violet500 da 4.2:1 sobre Slate900 (bajo el mínimo AA de 4.5:1 para texto),
+ * pero sí sirve para el punto/relleno no-textual (WCAG 1.4.11 solo exige 3:1 ahí).
+ */
+private fun colorTextoPizarra(colorRelleno: Color): Color =
+    if (colorRelleno == Violet500) Violet400 else colorRelleno
+
 @Composable
 fun PizarraRelevosCard(filas: List<FilaWhiteboard>) {
     Card(
@@ -1519,18 +1542,23 @@ fun PizarraRelevosCard(filas: List<FilaWhiteboard>) {
             val hoy = remember { LocalDate.now() }
             val grupos = remember(filas, hoy) {
                 listOf(
-                    Triple("REGRESAN A MINA", Emerald500, filas.filter { esIngresaProximo(it, hoy) }),
-                    Triple("EN DESCANSO", Violet500, filas.filter { it.enDescanso && !esIngresaProximo(it, hoy) }),
-                    Triple("EN MINA TRABAJANDO", Amber400, filas.filter { !it.enDescanso && !esIngresaProximo(it, hoy) })
+                    GrupoPizarra(FiltroPizarra.REGRESAN, "REGRESAN A MINA", Emerald500, Icons.Default.DirectionsRun, filas.filter { esIngresaProximo(it, hoy) }),
+                    GrupoPizarra(FiltroPizarra.DESCANSO, "EN DESCANSO", Violet500, Icons.Default.Bedtime, filas.filter { it.enDescanso && !esIngresaProximo(it, hoy) }),
+                    GrupoPizarra(FiltroPizarra.EN_MINA, "EN MINA TRABAJANDO", Amber400, Icons.Default.Construction, filas.filter { !it.enDescanso && !esIngresaProximo(it, hoy) })
                 )
             }
+            var filtro by rememberSaveable { mutableStateOf(FiltroPizarra.TODOS) }
 
-            grupos.forEach { (titulo, color, filasGrupo) ->
-                if (filasGrupo.isEmpty()) return@forEach
-                SeccionPizarraHeader(titulo = titulo, color = color, cantidad = filasGrupo.size)
-                filasGrupo.forEachIndexed { index, fila ->
+            FiltrosPizarraRow(total = filas.size, grupos = grupos, filtroActivo = filtro, onFiltroChange = { filtro = it })
+            HorizontalDivider(color = Slate800)
+
+            grupos.forEach { grupo ->
+                if (filtro != FiltroPizarra.TODOS && filtro != grupo.filtro) return@forEach
+                if (grupo.filas.isEmpty()) return@forEach
+                SeccionPizarraHeader(titulo = grupo.titulo, color = grupo.color, icono = grupo.icono, cantidad = grupo.filas.size)
+                grupo.filas.forEachIndexed { index, fila ->
                     FilaPizarraRow(fila = fila, hoy = hoy)
-                    if (index != filasGrupo.lastIndex) {
+                    if (index != grupo.filas.lastIndex) {
                         HorizontalDivider(
                             color = Rose500.copy(alpha = 0.25f),
                             thickness = 1.dp,
@@ -1554,7 +1582,57 @@ private fun colorEstadoPizarra(fila: FilaWhiteboard, ingresaProximo: Boolean): C
 }
 
 @Composable
-private fun SeccionPizarraHeader(titulo: String, color: Color, cantidad: Int) {
+private fun FiltrosPizarraRow(
+    total: Int,
+    grupos: List<GrupoPizarra>,
+    filtroActivo: FiltroPizarra,
+    onFiltroChange: (FiltroPizarra) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        ChipFiltroPizarra(
+            texto = "Todos ($total)",
+            seleccionado = filtroActivo == FiltroPizarra.TODOS,
+            color = Slate300,
+            onClick = { onFiltroChange(FiltroPizarra.TODOS) }
+        )
+        grupos.forEach { grupo ->
+            ChipFiltroPizarra(
+                texto = "${grupo.titulo.lowercase().replaceFirstChar { it.uppercase() }} (${grupo.filas.size})",
+                seleccionado = filtroActivo == grupo.filtro,
+                color = grupo.color,
+                onClick = { onFiltroChange(grupo.filtro) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChipFiltroPizarra(texto: String, seleccionado: Boolean, color: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (seleccionado) color.copy(alpha = 0.18f) else Slate950)
+            .border(1.dp, if (seleccionado) color.copy(alpha = 0.6f) else Slate800, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 11.dp, vertical = 6.dp)
+    ) {
+        Text(
+            text = texto,
+            color = if (seleccionado) colorTextoPizarra(color) else Slate400,
+            fontSize = 10.5.sp,
+            fontWeight = if (seleccionado) FontWeight.Black else FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun SeccionPizarraHeader(titulo: String, color: Color, icono: ImageVector, cantidad: Int) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1562,16 +1640,16 @@ private fun SeccionPizarraHeader(titulo: String, color: Color, cantidad: Int) {
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(6.dp)
-                .clip(CircleShape)
-                .background(color)
+        Icon(
+            imageVector = icono,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(13.dp)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(7.dp))
         Text(
             text = titulo,
-            color = color,
+            color = colorTextoPizarra(color),
             fontSize = 10.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = 0.5.sp,
@@ -1579,7 +1657,7 @@ private fun SeccionPizarraHeader(titulo: String, color: Color, cantidad: Int) {
         )
         Text(
             text = cantidad.toString(),
-            color = color,
+            color = colorTextoPizarra(color),
             fontSize = 10.sp,
             fontWeight = FontWeight.Black
         )
@@ -1633,7 +1711,7 @@ private fun FilaPizarraRow(fila: FilaWhiteboard, hoy: LocalDate) {
         Row(modifier = Modifier.fillMaxWidth()) {
             MiniFechaPizarra(etiqueta = "INICIO", valor = formatearFechaPizarra(fila.inicio), color = Slate200)
             MiniFechaPizarra(etiqueta = "FIN", valor = formatearFechaPizarra(fila.fin), color = Slate200)
-            MiniFechaPizarra(etiqueta = "INGRESA", valor = formatearFechaPizarra(fila.ingresa), color = colorEstado, destacado = true)
+            MiniFechaPizarra(etiqueta = "INGRESA", valor = formatearFechaPizarra(fila.ingresa), color = colorTextoPizarra(colorEstado), destacado = true)
         }
     }
 }
