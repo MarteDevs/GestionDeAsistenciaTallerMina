@@ -6,6 +6,7 @@ import com.mars.asistenciamina.data.api.ApiClient
 import com.mars.asistenciamina.data.local.SessionManager
 import com.mars.asistenciamina.data.models.EventoNotificacionDto
 import com.mars.asistenciamina.data.models.ResumenNotificacionesDto
+import com.mars.asistenciamina.data.models.TrabajadorDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +20,7 @@ sealed interface HomeUiState {
     data class Success(
         val resumen: ResumenNotificacionesDto,
         val eventos: List<EventoNotificacionDto>,
+        val trabajadores: List<TrabajadorDto>,
         val fechaReferencia: String,
         val isOffline: Boolean = false,
         val offlineTimestamp: Long = 0L,
@@ -44,6 +46,7 @@ class HomeViewModel : ViewModel() {
             _uiState.value = HomeUiState.Success(
                 resumen = cached.resumen,
                 eventos = cached.eventos,
+                trabajadores = SessionManager.getCachedTrabajadoresResponse().orEmpty(),
                 fechaReferencia = cached.fechaReferencia,
                 isOffline = false, // provisional hasta verificar red
                 offlineTimestamp = SessionManager.getCacheTimestamp(),
@@ -64,8 +67,12 @@ class HomeViewModel : ViewModel() {
                     fechaReferencia = fechaConsulta,
                     diasVentana = 7
                 )
+                // Lista completa de colaboradores (sin ventana de días) para el tablero tipo pizarra
+                val trabajadoresResponse = ApiClient.apiService.getTrabajadores(incluirInactivos = false)
+
                 // Guardar en caché local para persistencia offline
                 SessionManager.cacheTurnosResponse(response)
+                SessionManager.cacheTrabajadoresResponse(trabajadoresResponse.data)
 
                 // Sincronizar descartadas del backend con las guardadas en local
                 val backendDescartadas = response.descartadas.toSet()
@@ -77,6 +84,7 @@ class HomeViewModel : ViewModel() {
                 _uiState.value = HomeUiState.Success(
                     resumen = response.resumen,
                     eventos = response.eventos,
+                    trabajadores = trabajadoresResponse.data,
                     fechaReferencia = response.fechaReferencia,
                     isOffline = false,
                     offlineTimestamp = System.currentTimeMillis(),
@@ -89,6 +97,7 @@ class HomeViewModel : ViewModel() {
                     _uiState.value = HomeUiState.Success(
                         resumen = cached.resumen,
                         eventos = cached.eventos,
+                        trabajadores = SessionManager.getCachedTrabajadoresResponse().orEmpty(),
                         fechaReferencia = cached.fechaReferencia,
                         isOffline = true,
                         offlineTimestamp = SessionManager.getCacheTimestamp(),

@@ -145,11 +145,13 @@ object NotificationHelper {
             sendShiftNotification(context, 1001, titulo, mensaje, CHANNEL_ID_URGENT, isUrgent = true)
         }
 
-        val retornosHoy = eventos.filter { it.diasRestantes == 0 && (it.tipo == "FIN_DESCANSO" || it.tipo == "EN_DESCANSO") }
-        if (retornosHoy.isNotEmpty()) {
-            val nombres = retornosHoy.joinToString(", ") { it.trabajadorNombre }
-            val titulo = if (retornosHoy.size == 1) "¡HOY RETORNO A MINA!" else "¡HOY ${retornosHoy.size} RETORNAN A MINA!"
-            val mensaje = "Hoy culmina el descanso e inician labores en Taller Mina: $nombres."
+        // El descanso ya terminó: el colaborador está hoy en mina trabajando (tipo propio del backend,
+        // no debe confundirse con "EN_DESCANSO", que todavía sigue de descanso hoy).
+        val yaEnMinaHoy = eventos.filter { it.tipo == "RETORNO_HOY" }
+        if (yaEnMinaHoy.isNotEmpty()) {
+            val nombres = yaEnMinaHoy.joinToString(", ") { it.trabajadorNombre }
+            val titulo = if (yaEnMinaHoy.size == 1) "¡Hoy te toca trabajar!" else "¡Hoy ${yaEnMinaHoy.size} vuelven a trabajar!"
+            val mensaje = "Terminó su descanso e ingresó hoy a laborar en Taller Mina: $nombres."
             sendShiftNotification(context, 1002, titulo, mensaje, CHANNEL_ID_URGENT, isUrgent = true)
         }
 
@@ -162,11 +164,13 @@ object NotificationHelper {
             sendShiftNotification(context, 1003, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
         }
 
-        val retornosManana = eventos.filter { it.diasRestantes == 1 && (it.tipo == "FIN_DESCANSO" || it.tipo == "EN_DESCANSO") }
-        if (retornosManana.isNotEmpty()) {
-            val nombres = retornosManana.joinToString(", ") { it.trabajadorNombre }
-            val titulo = "Falta 1 Día: Mañana retorno a mina"
-            val mensaje = "Último día de descanso. Mañana suben a mina a iniciar labores: $nombres."
+        // "EN_DESCANSO" con diasRestantes = días que faltan para el día de FIN (pizarra). El día de
+        // trabajo real (INGRESA) es uno después y tiene su propia alerta aparte: "yaEnMinaHoy".
+        val descansoTerminaHoy = eventos.filter { it.diasRestantes == 0 && it.tipo == "EN_DESCANSO" }
+        if (descansoTerminaHoy.isNotEmpty()) {
+            val nombres = descansoTerminaHoy.joinToString(", ") { it.trabajadorNombre }
+            val titulo = "¡Hoy termina tu descanso!"
+            val mensaje = "Hoy es tu último día de descanso. Mañana ingresas a trabajar a Taller Mina: $nombres."
             sendShiftNotification(context, 1004, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
         }
 
@@ -179,11 +183,11 @@ object NotificationHelper {
             sendShiftNotification(context, 1005, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
         }
 
-        val retornosDosDias = eventos.filter { it.diasRestantes == 2 && (it.tipo == "FIN_DESCANSO" || it.tipo == "EN_DESCANSO") }
-        if (retornosDosDias.isNotEmpty()) {
-            val nombres = retornosDosDias.joinToString(", ") { it.trabajadorNombre }
-            val titulo = "Faltan 2 Días para retornar a mina"
-            val mensaje = "Quedan 48 horas de descanso. En 2 días retornan a labores en Taller Mina: $nombres."
+        val descansoTerminaManana = eventos.filter { it.diasRestantes == 1 && it.tipo == "EN_DESCANSO" }
+        if (descansoTerminaManana.isNotEmpty()) {
+            val nombres = descansoTerminaManana.joinToString(", ") { it.trabajadorNombre }
+            val titulo = "Mañana termina tu descanso"
+            val mensaje = "Tu descanso termina mañana. Al día siguiente ingresas a trabajar a Taller Mina: $nombres."
             sendShiftNotification(context, 1006, titulo, mensaje, CHANNEL_ID_REGULAR, isUrgent = false)
         }
 

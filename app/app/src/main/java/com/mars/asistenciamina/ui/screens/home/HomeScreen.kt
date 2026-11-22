@@ -1,13 +1,10 @@
 package com.mars.asistenciamina.ui.screens.home
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.res.painterResource
 import com.mars.asistenciamina.R
@@ -15,24 +12,23 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.DirectionsRun
@@ -69,7 +65,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -78,10 +73,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mars.asistenciamina.data.models.EventoNotificacionDto
+import com.mars.asistenciamina.data.models.TrabajadorDto
 import com.mars.asistenciamina.ui.components.SkeletonItem
 import com.mars.asistenciamina.ui.theme.Amber400
 import com.mars.asistenciamina.ui.theme.Amber500
-import com.mars.asistenciamina.ui.theme.Cyan500
 import com.mars.asistenciamina.ui.theme.Emerald500
 import com.mars.asistenciamina.ui.theme.Rose500
 import com.mars.asistenciamina.ui.theme.Violet500
@@ -152,11 +147,13 @@ fun HomeScreen(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier
+                            .padding(vertical = 4.dp)
+                            .fillMaxWidth()
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(36.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(Slate900)
                                 .border(1.dp, Slate800, RoundedCornerShape(10.dp)),
@@ -165,23 +162,29 @@ fun HomeScreen(
                             Image(
                                 painter = painterResource(id = R.drawable.ic_logo_asistencia_mina),
                                 contentDescription = "Logo Taller Mina",
-                                modifier = Modifier.size(30.dp)
+                                modifier = Modifier.size(26.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
+                        Spacer(modifier = Modifier.width(10.dp))
+                        // weight(1f) + maxLines=1: nunca envuelve a 2 líneas ni se recorta
+                        // verticalmente contra la altura fija del TopAppBar.
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "TALLER MINA",
-                                fontSize = 17.sp,
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
-                                letterSpacing = 0.6.sp,
-                                color = Color.White
+                                letterSpacing = 0.4.sp,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = if (usuarioActual != null) "Hola, ${usuarioActual.nombres.split(" ").firstOrNull() ?: usuarioActual.nombres}" else "Operación 30x10 Mina",
-                                fontSize = 12.sp,
+                                fontSize = 11.5.sp,
                                 color = Slate400,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -198,25 +201,30 @@ fun HomeScreen(
                         onClick = { showNotificationsModal = true },
                         modifier = Modifier.size(44.dp)
                     ) {
-                        Box(contentAlignment = Alignment.TopEnd) {
+                        Box(modifier = Modifier.size(24.dp)) {
                             Icon(
                                 imageVector = if (totalAlertasPendientes > 0) Icons.Default.NotificationsActive else Icons.Default.Notifications,
                                 contentDescription = "Ver Notificaciones de Relevo",
                                 tint = if (totalAlertasPendientes > 0) Amber400 else Slate400,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .align(Alignment.Center)
                             )
                             if (totalAlertasPendientes > 0) {
                                 Box(
                                     modifier = Modifier
-                                        .size(17.dp)
+                                        .size(16.dp)
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = 5.dp, y = (-5).dp)
                                         .clip(CircleShape)
-                                        .background(Rose500),
+                                        .background(Rose500)
+                                        .border(1.5.dp, Slate950, CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         text = if (totalAlertasPendientes > 9) "9+" else totalAlertasPendientes.toString(),
                                         color = Color.White,
-                                        fontSize = 9.5.sp,
+                                        fontSize = 8.5.sp,
                                         fontWeight = FontWeight.Black
                                     )
                                 }
@@ -295,28 +303,30 @@ fun HomeScreen(
             }
 
             is HomeUiState.Success -> {
-                var selectedTab by rememberSaveable { mutableStateOf("TODOS") }
-
-                val totalCount = uiState.eventos.size
-                val descansoCount = uiState.eventos.count { it.tipo == "EN_DESCANSO" || it.tipo == "FIN_DESCANSO" }
-                val enMinaCount = uiState.eventos.count { it.tipo == "INICIO_DESCANSO" || it.tipo == "RETORNO_HOY" }
+                // Una fila por colaborador activo, igual que la pizarra física: NOMBRE | INICIO | FIN | INGRESA
+                val filasPizarra = remember(uiState.trabajadores) {
+                    uiState.trabajadores
+                        .mapNotNull { obtenerFilaWhiteboard(it) }
+                        .sortedBy { it.nombres }
+                }
+                val descansoCount = filasPizarra.count { it.enDescanso }
+                val enMinaCount = filasPizarra.size - descansoCount
                 val ventasCount = uiState.eventos.count { it.tipo == "VENTA_ACTIVA" || it.tipo == "PERMISO_ACTIVO" }
 
-                val eventosFiltrados = remember(selectedTab, uiState.eventos) {
-                    when (selectedTab) {
-                        "EN_DESCANSO" -> uiState.eventos.filter { it.tipo == "EN_DESCANSO" || it.tipo == "FIN_DESCANSO" }
-                        "EN_MINA", "POR_BAJAR" -> uiState.eventos.filter { it.tipo == "INICIO_DESCANSO" || it.tipo == "RETORNO_HOY" }
-                        "VENTAS" -> uiState.eventos.filter { it.tipo == "VENTA_ACTIVA" || it.tipo == "PERMISO_ACTIVO" }
-                        else -> uiState.eventos
-                    }
-                }
-
-                LazyColumn(
+                // BoxWithConstraints detecta el ancho real: en tableta/landscape centra el
+                // contenido con un ancho máximo en vez de estirar tarjetas de borde a borde.
+                BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+                        .padding(innerPadding)
                 ) {
+                    val anchoContenido = if (maxWidth > 600.dp) 600.dp else maxWidth
+                    LazyColumn(
+                        modifier = Modifier
+                            .width(anchoContenido)
+                            .align(Alignment.TopCenter),
+                        contentPadding = PaddingValues(bottom = 24.dp)
+                    ) {
                     // Banner de Modo Sin Conexión
                     if (uiState.isOffline) {
                         item {
@@ -391,7 +401,7 @@ fun HomeScreen(
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = "Ref: ${uiState.fechaReferencia} (7 días ventana)",
+                                            text = "Ref: ${uiState.fechaReferencia}",
                                             color = Slate400,
                                             fontSize = 12.sp
                                         )
@@ -442,65 +452,10 @@ fun HomeScreen(
                         }
                     }
 
-                    // Segmented Tabs / Filtros Rápidos
-                    item {
-                        LazyRow(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            item {
-                                FiltroChip(
-                                    texto = "Todos",
-                                    conteo = totalCount,
-                                    seleccionado = selectedTab == "TODOS",
-                                    colorActivo = Amber500,
-                                    onClick = { selectedTab = "TODOS" }
-                                )
-                            }
-                            item {
-                                FiltroChip(
-                                    texto = "En Descanso",
-                                    conteo = descansoCount,
-                                    seleccionado = selectedTab == "EN_DESCANSO",
-                                    colorActivo = Violet500,
-                                    icon = Icons.Default.Bedtime,
-                                    onClick = { selectedTab = "EN_DESCANSO" }
-                                )
-                            }
-                            item {
-                                FiltroChip(
-                                    texto = "En Mina",
-                                    conteo = enMinaCount,
-                                    seleccionado = selectedTab == "EN_MINA" || selectedTab == "POR_BAJAR",
-                                    colorActivo = Amber400,
-                                    icon = Icons.Default.Construction,
-                                    onClick = { selectedTab = "EN_MINA" }
-                                )
-                            }
-                            item {
-                                FiltroChip(
-                                    texto = "Ventas (VD)",
-                                    conteo = ventasCount,
-                                    seleccionado = selectedTab == "VENTAS",
-                                    colorActivo = Emerald500,
-                                    icon = Icons.Default.Paid,
-                                    onClick = { selectedTab = "VENTAS" }
-                                )
-                            }
-                        }
-                    }
-
-                    // Título de la sección
+                    // Título de la sección: tablero tipo pizarra física
                     item {
                         Text(
-                            text = when (selectedTab) {
-                                "EN_DESCANSO" -> "PERSONAL EN DESCANSO PROGRAMADO (${eventosFiltrados.size})"
-                                "EN_MINA", "POR_BAJAR" -> "COLABORADORES EN MINA (${eventosFiltrados.size})"
-                                "VENTAS" -> "VENTAS DE DESCANSO ACTIVAS (${eventosFiltrados.size})"
-                                else -> "TODOS LOS RELEVOS EN VENTANA (${eventosFiltrados.size})"
-                            },
+                            text = "TABLERO DE RELEVOS 30x10 (${filasPizarra.size})",
                             color = Slate400,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
@@ -509,7 +464,7 @@ fun HomeScreen(
                         )
                     }
 
-                    if (eventosFiltrados.isEmpty()) {
+                    if (filasPizarra.isEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier
@@ -526,7 +481,7 @@ fun HomeScreen(
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = "No hay registros en esta categoría",
+                                        text = "No hay colaboradores con periodos 30x10 registrados",
                                         color = Slate400,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium
@@ -535,15 +490,10 @@ fun HomeScreen(
                             }
                         }
                     } else {
-                        // Lista de Eventos Filtrados
-                        items(eventosFiltrados, key = { it.id }) { evento ->
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = fadeIn() + slideInVertically()
-                            ) {
-                                EventoItemCard(evento = evento)
-                            }
+                        item {
+                            PizarraRelevosCard(filas = filasPizarra)
                         }
+                    }
                     }
                 }
             }
@@ -1332,7 +1282,9 @@ fun ItemNotificacionSheet(
                     color = Color.White,
                     fontSize = 14.5.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f, fill = false)
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Box(
@@ -1397,62 +1349,6 @@ fun ItemNotificacionSheet(
                         )
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun FiltroChip(
-    texto: String,
-    conteo: Int,
-    seleccionado: Boolean,
-    colorActivo: Color,
-    icon: ImageVector? = null,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (seleccionado) colorActivo.copy(alpha = 0.2f) else Slate900)
-            .border(
-                width = 1.dp,
-                color = if (seleccionado) colorActivo else Slate800,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 9.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (seleccionado) colorActivo else Slate400,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-            }
-            Text(
-                text = texto,
-                color = if (seleccionado) colorActivo else Slate400,
-                fontSize = 13.sp,
-                fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Medium
-            )
-            Spacer(modifier = Modifier.width(7.dp))
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(if (seleccionado) colorActivo else Slate800)
-                    .padding(horizontal = 7.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = conteo.toString(),
-                    color = if (seleccionado) Slate950 else Slate400,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black
-                )
             }
         }
     }
@@ -1553,248 +1449,211 @@ fun formatearFechaEspanol(fechaIso: String): String {
     }
 }
 
+/**
+ * Una fila de la pizarra física de relevos: nombre + fechas INICIO / FIN / INGRESA
+ * del periodo de descanso vigente (si está hoy en descanso) o del próximo programado.
+ */
+data class FilaWhiteboard(
+    val trabajadorId: Int,
+    val nombres: String,
+    val area: String,
+    val inicio: LocalDate,
+    val fin: LocalDate,
+    val ingresa: LocalDate,
+    val enDescanso: Boolean
+)
+
+/**
+ * Misma regla de selección que [obtenerEstadoOperativo] en TrabajadoresScreen (descanso activo
+ * hoy, si no el próximo futuro) pero devolviendo las fechas crudas para las 3 columnas de la pizarra.
+ */
+fun obtenerFilaWhiteboard(
+    trabajador: TrabajadorDto,
+    hoy: LocalDate = LocalDate.now()
+): FilaWhiteboard? {
+    val periodos = trabajador.descansos.mapNotNull { d ->
+        try {
+            Triple(d, LocalDate.parse(d.fechaInicio.take(10)), LocalDate.parse(d.fechaFin.take(10)))
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    val activo = periodos.firstOrNull { (_, ini, fin) -> !hoy.isBefore(ini) && !hoy.isAfter(fin) }
+    // El descanso que terminó ayer se mantiene visible el día de retorno (ya en mina trabajando hoy)
+    val retornoHoy = periodos.firstOrNull { (_, _, fin) -> fin.plusDays(1) == hoy }
+    val (_, ini, fin) = activo
+        ?: retornoHoy
+        ?: periodos.filter { it.second.isAfter(hoy) }.minByOrNull { it.second }
+        ?: return null
+
+    return FilaWhiteboard(
+        trabajadorId = trabajador.id,
+        nombres = trabajador.nombres,
+        area = trabajador.area,
+        inicio = ini,
+        fin = fin,
+        ingresa = fin.plusDays(1),
+        enDescanso = activo != null
+    )
+}
+
+private val MESES_CORTOS_PIZARRA = arrayOf(
+    "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Set", "Oct", "Nov", "Dic"
+)
+
+fun formatearFechaPizarra(fecha: LocalDate): String =
+    "%02d-%s".format(fecha.dayOfMonth, MESES_CORTOS_PIZARRA[fecha.monthValue - 1])
+
 @Composable
-fun EventoItemCard(evento: EventoNotificacionDto) {
-    val esRetornoHoy = evento.tipo == "RETORNO_HOY"
-    val esEnDescanso = evento.tipo == "EN_DESCANSO" || evento.tipo == "FIN_DESCANSO"
-    val esPorBajar = evento.tipo == "INICIO_DESCANSO"
-    val esVenta = evento.tipo == "VENTA_ACTIVA"
-
-    val badgeColor = when {
-        esRetornoHoy -> Emerald500
-        esEnDescanso -> Violet500
-        esPorBajar -> Amber400
-        esVenta -> Emerald500
-        else -> Rose500
-    }
-
-    val badgeLabel = when {
-        esRetornoHoy -> "Ya en Mina"
-        esEnDescanso -> "En Descanso"
-        esPorBajar -> "En Mina"
-        esVenta -> "Venta Activa"
-        else -> "Permiso Especial"
-    }
-
-    val iconVector = when {
-        esRetornoHoy -> Icons.Default.Construction
-        esEnDescanso -> Icons.Default.Bedtime
-        esPorBajar -> Icons.Default.Construction
-        esVenta -> Icons.Default.Paid
-        else -> Icons.Default.Assignment
-    }
-
-    val fechaEfectiva = remember(evento) {
-        obtenerFechaDashboard(evento)
-    }
-
-    val esEventoHoy = evento.esHoy || evento.diasRestantes <= 0
-
-    val fechaLegible = remember(fechaEfectiva) {
-        formatearFechaEspanol(fechaEfectiva)
-    }
-
-    val descLimpia = remember(evento.descripcion, evento.trabajadorNombre) {
-        limpiarDescripcion(evento.descripcion, evento.trabajadorNombre)
-    }
-
+fun PizarraRelevosCard(filas: List<FilaWhiteboard>) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Slate900),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Slate800)
+        border = BorderStroke(1.dp, Slate800)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            // Fila Superior 1: Badges de Estado y Contador de Días en extremos limpios
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Badge de Estado Operativo
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(badgeColor.copy(alpha = 0.16f))
-                        .border(1.dp, badgeColor.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = iconVector,
-                            contentDescription = null,
-                            tint = badgeColor,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = badgeLabel.uppercase(),
-                            color = badgeColor,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                }
-
-                // Badge Contador de Días
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (esEventoHoy) Rose500.copy(alpha = 0.2f)
-                            else Slate800
-                        )
-                        .border(
-                            1.dp,
-                            if (esEventoHoy) Rose500.copy(alpha = 0.6f) else Slate700,
-                            RoundedCornerShape(8.dp)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Text(
-                        text = when {
-                            esRetornoHoy -> "¡Trabajando hoy!"
-                            esEnDescanso && esEventoHoy -> "Retorna mañana"
-                            esEnDescanso -> "Retorna en ${evento.diasRestantes + 1} días"
-                            esPorBajar && esEventoHoy -> "Baja hoy"
-                            esPorBajar && evento.diasRestantes == 1 -> "Baja mañana"
-                            esPorBajar -> "Baja en ${evento.diasRestantes} días"
-                            esEventoHoy -> "¡HOY!"
-                            else -> "En ${evento.diasRestantes} días"
-                        },
-                        color = if (esRetornoHoy) Emerald500 else if (esEventoHoy) Rose500 else Slate300,
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            val hoy = remember { LocalDate.now() }
+            val grupos = remember(filas, hoy) {
+                listOf(
+                    Triple("REGRESAN A MINA", Emerald500, filas.filter { esIngresaProximo(it, hoy) }),
+                    Triple("EN DESCANSO", Violet500, filas.filter { it.enDescanso && !esIngresaProximo(it, hoy) }),
+                    Triple("EN MINA TRABAJANDO", Amber400, filas.filter { !it.enDescanso && !esIngresaProximo(it, hoy) })
+                )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Fila 2: Avatar Grande (52dp) + Nombre Completo (sin recortes) + Área + Descripción
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(badgeColor.copy(alpha = 0.15f))
-                        .border(1.dp, badgeColor.copy(alpha = 0.35f), RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = iconVector,
-                        contentDescription = null,
-                        tint = badgeColor,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(14.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    // Nombre Completo: Fuente grande, FontWeight.Black, hasta 2 líneas para NUNCA truncar
-                    Text(
-                        text = evento.trabajadorNombre,
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Black,
-                        lineHeight = 22.sp,
-                        maxLines = 2
-                    )
-
-                    if (evento.area.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = evento.area,
-                            color = Slate400,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
+            grupos.forEach { (titulo, color, filasGrupo) ->
+                if (filasGrupo.isEmpty()) return@forEach
+                SeccionPizarraHeader(titulo = titulo, color = color, cantidad = filasGrupo.size)
+                filasGrupo.forEachIndexed { index, fila ->
+                    FilaPizarraRow(fila = fila, hoy = hoy)
+                    if (index != filasGrupo.lastIndex) {
+                        HorizontalDivider(
+                            color = Rose500.copy(alpha = 0.25f),
+                            thickness = 1.dp,
+                            modifier = Modifier.padding(horizontal = 10.dp)
                         )
                     }
-
-                    // Mostrar descripción solo para ventas/permisos con motivo (evita texto largo redundante en descansos)
-                    val motivoOExtra = if (!esEnDescanso && !esPorBajar && !esRetornoHoy) descLimpia else evento.detalle?.motivo.orEmpty()
-                    if (motivoOExtra.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = motivoOExtra,
-                            color = Slate300,
-                            fontSize = 12.5.sp,
-                            lineHeight = 17.5.sp
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Fila 3: Contenedor elegante de Fecha Formateada en Español
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Slate950)
-                    .border(1.dp, Slate800, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = null,
-                            tint = Amber400,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            val accionFecha = when {
-                                esRetornoHoy -> "Trabajando en mina"
-                                esEnDescanso -> "Retorna a mina"
-                                esPorBajar -> "Próx. descanso"
-                                esVenta -> "Venta de descanso"
-                                else -> "Permiso programado"
-                            }
-                            Text(
-                                text = accionFecha,
-                                color = Slate400,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = fechaLegible,
-                                color = Color.White,
-                                fontSize = 13.5.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = Slate600,
-                        modifier = Modifier.size(18.dp)
-                    )
                 }
             }
         }
     }
 }
+
+fun esIngresaProximo(fila: FilaWhiteboard, hoy: LocalDate): Boolean =
+    !fila.ingresa.isBefore(hoy) && !fila.ingresa.isAfter(hoy.plusDays(1))
+
+/** Color de estado operativo del colaborador: urgente > en descanso > en mina. */
+private fun colorEstadoPizarra(fila: FilaWhiteboard, ingresaProximo: Boolean): Color = when {
+    ingresaProximo -> Emerald500
+    fila.enDescanso -> Violet500
+    else -> Amber400
+}
+
+@Composable
+private fun SeccionPizarraHeader(titulo: String, color: Color, cantidad: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(color.copy(alpha = 0.12f))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = titulo,
+            color = color,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 0.5.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = cantidad.toString(),
+            color = color,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black
+        )
+    }
+}
+
+/**
+ * Fila de dos líneas: el nombre ocupa todo el ancho de la tarjeta (nunca compite por espacio
+ * con las fechas, así no se corta con nombres compuestos largos) y las 3 fechas van debajo,
+ * compactas y con su propia etiqueta — ya no dependen de un encabezado de columna alineado.
+ */
+@Composable
+private fun FilaPizarraRow(fila: FilaWhiteboard, hoy: LocalDate) {
+    val ingresaProximo = esIngresaProximo(fila, hoy)
+    val colorEstado = colorEstadoPizarra(fila, ingresaProximo)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(colorEstado)
+            )
+            Spacer(modifier = Modifier.width(7.dp))
+            Text(
+                text = fila.nombres,
+                color = Color.White,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            if (fila.area.isNotBlank()) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = fila.area,
+                    color = Slate400,
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            MiniFechaPizarra(etiqueta = "INICIO", valor = formatearFechaPizarra(fila.inicio), color = Slate200)
+            MiniFechaPizarra(etiqueta = "FIN", valor = formatearFechaPizarra(fila.fin), color = Slate200)
+            MiniFechaPizarra(etiqueta = "INGRESA", valor = formatearFechaPizarra(fila.ingresa), color = colorEstado, destacado = true)
+        }
+    }
+}
+
+@Composable
+private fun RowScope.MiniFechaPizarra(etiqueta: String, valor: String, color: Color, destacado: Boolean = false) {
+    Column(modifier = Modifier.weight(1f)) {
+        Text(
+            text = etiqueta,
+            color = Slate400,
+            fontSize = 8.5.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 0.4.sp
+        )
+        Text(
+            text = valor,
+            color = color,
+            fontSize = if (destacado) 13.sp else 11.5.sp,
+            fontWeight = if (destacado) FontWeight.Black else FontWeight.SemiBold
+        )
+    }
+}
+

@@ -8,7 +8,6 @@ import {
   Filter,
   ArrowRight,
   RefreshCw,
-  Clock,
   CheckCircle2,
   AlertTriangle,
   Briefcase
@@ -48,6 +47,76 @@ interface ApiResponse {
   data: EventoTurno[];
 }
 
+interface DescansoProgramado {
+  fechaInicio: string;
+  fechaFin: string;
+}
+
+interface TrabajadorPizarra {
+  id: number;
+  nombres: string;
+  area: string;
+  descansosProgramados: DescansoProgramado[];
+}
+
+interface FilaPizarra {
+  trabajadorId: number;
+  nombres: string;
+  area: string;
+  inicio: string;
+  fin: string;
+  ingresa: string;
+  enDescanso: boolean;
+}
+
+const MESES_CORTOS_PIZARRA = [
+  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic'
+];
+
+/** Formatea una fecha ISO (YYYY-MM-DD) como "02-Nov", igual que la pizarra física. */
+function formatFechaPizarra(fechaIso: string): string {
+  const [, mes, dia] = fechaIso.split('-');
+  return `${dia}-${MESES_CORTOS_PIZARRA[parseInt(mes, 10) - 1]}`;
+}
+
+/** Suma días a una fecha ISO (YYYY-MM-DD) sin desfases de huso horario. */
+function sumarDiasIso(fechaIso: string, dias: number): string {
+  const fecha = new Date(`${fechaIso}T00:00:00.000Z`);
+  fecha.setUTCDate(fecha.getUTCDate() + dias);
+  return fecha.toISOString().slice(0, 10);
+}
+
+/**
+ * Misma regla de selección que usa el backend/móvil: el descanso activo hoy, si no
+ * el que terminó ayer (día de retorno a mina), si no el próximo programado. Fechas
+ * ISO comparan correctamente como texto, por eso no hace falta parsear a Date.
+ */
+function obtenerFilaPizarra(trabajador: TrabajadorPizarra, hoyIso: string): FilaPizarra | null {
+  const periodos = trabajador.descansosProgramados.map((d) => ({
+    inicio: d.fechaInicio.slice(0, 10),
+    fin: d.fechaFin.slice(0, 10),
+  }));
+
+  const activo = periodos.find((p) => p.inicio <= hoyIso && hoyIso <= p.fin);
+  const retornoHoy = periodos.find((p) => sumarDiasIso(p.fin, 1) === hoyIso);
+  const futuro = periodos
+    .filter((p) => p.inicio > hoyIso)
+    .sort((a, b) => a.inicio.localeCompare(b.inicio))[0];
+
+  const periodo = activo ?? retornoHoy ?? futuro;
+  if (!periodo) return null;
+
+  return {
+    trabajadorId: trabajador.id,
+    nombres: trabajador.nombres,
+    area: trabajador.area,
+    inicio: periodo.inicio,
+    fin: periodo.fin,
+    ingresa: sumarDiasIso(periodo.fin, 1),
+    enDescanso: !!activo,
+  };
+}
+
 interface DashboardRelevosProps {
   onVerPlanilla: () => void;
 }
@@ -55,6 +124,7 @@ interface DashboardRelevosProps {
 export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanilla }) => {
   const { token } = useAuth();
   const [data, setData] = useState<ApiResponse | null>(null);
+  const [trabajadores, setTrabajadores] = useState<TrabajadorPizarra[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState<string>('');
@@ -72,28 +142,33 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(
-        `/api/notificaciones/proximos-turnos?fechaReferencia=${encodeURIComponent(
-          fechaReferencia
-        )}&diasVentana=7`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-      if (res.status === 401) {
+      const [resTurnos, resTrabajadores] = await Promise.all([
+        fetch(
+          `/api/notificaciones/proximos-turnos?fechaReferencia=${encodeURIComponent(
+            fechaReferencia
+          )}&diasVentana=7`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        ),
+        fetch('/api/trabajadores', { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      if (resTurnos.status === 401 || resTrabajadores.status === 401) {
         window.dispatchEvent(new CustomEvent('auth:unauthorized'));
         throw new Error('Sesión expirada o no autorizada');
       }
-      if (!res.ok) {
-        throw new Error(`Error en servidor: ${res.statusText}`);
+      if (!resTurnos.ok) {
+        throw new Error(`Error en servidor: ${resTurnos.statusText}`);
       }
-      const json: ApiResponse = await res.json();
-      if (json.success) {
-        setData(json);
-      } else {
+      const json: ApiResponse = await resTurnos.json();
+      if (!json.success) {
         throw new Error('Respuesta no satisfactoria del servidor');
+      }
+      setData(json);
+
+      if (resTrabajadores.ok) {
+        const jsonTrabajadores = await resTrabajadores.json();
+        if (jsonTrabajadores.success) {
+          setTrabajadores(jsonTrabajadores.data);
+        }
       }
     } catch (err: any) {
       console.error('Error al cargar datos del dashboard:', err);
@@ -107,29 +182,19 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
     fetchNotificaciones();
   }, [token, fechaReferencia]);
 
-  const eventos = data?.data || [];
-
-  // Filtrado por búsqueda y área
-  const eventosFiltrados = eventos.filter((ev) => {
-    const coincideTexto =
-      ev.nombres.toLowerCase().includes(busqueda.toLowerCase()) ||
-      ev.area.toLowerCase().includes(busqueda.toLowerCase()) ||
-      ev.descripcion.toLowerCase().includes(busqueda.toLowerCase());
-    const coincideArea =
-      filtroArea === 'TODAS' || ev.area.toLowerCase().includes(filtroArea.toLowerCase());
-    return coincideTexto && coincideArea;
-  });
-
-  // Clasificación de eventos
-  const proximosSalidaDescanso = eventosFiltrados.filter(
-    (e) => e.tipo === 'INICIO_DESCANSO'
-  );
-  const proximosRetornoMina = eventosFiltrados.filter(
-    (e) => e.tipo === 'FIN_DESCANSO' || e.tipo === 'EN_DESCANSO' || e.tipo === 'RETORNO_HOY'
-  );
-  const ventasActivas = eventosFiltrados.filter(
-    (e) => e.tipo === 'VENTA_ACTIVA'
-  );
+  // Tablero tipo pizarra: una fila por colaborador con su periodo vigente (NOMBRE | INICIO | FIN | INGRESA)
+  const filasPizarra = trabajadores
+    .map((t) => obtenerFilaPizarra(t, fechaReferencia))
+    .filter((f): f is FilaPizarra => f !== null)
+    .filter((f) => {
+      const coincideTexto =
+        f.nombres.toLowerCase().includes(busqueda.toLowerCase()) ||
+        f.area.toLowerCase().includes(busqueda.toLowerCase());
+      const coincideArea =
+        filtroArea === 'TODAS' || f.area.toLowerCase().includes(filtroArea.toLowerCase());
+      return coincideTexto && coincideArea;
+    })
+    .sort((a, b) => a.nombres.localeCompare(b.nombres));
 
   return (
     <div className="w-full space-y-5 animate-in fade-in duration-200">
@@ -291,187 +356,72 @@ export const DashboardRelevos: React.FC<DashboardRelevosProps> = ({ onVerPlanill
           <p className="text-xs text-rose-600 mt-1">{error}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Columna 1: Próximos a salir a descanso */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-            <div className="p-3.5 bg-gradient-to-r from-purple-950 to-slate-900 text-white flex items-center justify-between border-b border-purple-900/40">
-              <div className="flex items-center space-x-2">
-                <Moon className="w-4 h-4 text-purple-300" />
-                <h3 className="text-xs font-black tracking-wide">
-                  PRÓXIMOS A SALIR A DESCANSO
-                </h3>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200 text-[10px] font-bold border border-purple-500/30">
-                {proximosSalidaDescanso.length}
-              </span>
-            </div>
-
-            <div className="p-3 flex-1 overflow-y-auto max-h-[440px] space-y-2.5">
-              {proximosSalidaDescanso.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 text-xs">
-                  <CheckCircle2 className="w-6 h-6 mx-auto mb-1.5 text-slate-300" />
-                  No hay salidas a descanso programadas en la ventana actual.
-                </div>
-              ) : (
-                proximosSalidaDescanso.map((ev) => (
-                  <div
-                    key={ev.id}
-                    className="p-3 rounded-xl border border-purple-100 bg-purple-50/40 hover:bg-purple-50/80 transition shadow-sm space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 truncate">
-                        {ev.nombres}
-                      </span>
-                      <span
-                        className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
-                          ev.diasRestantes === 0
-                            ? 'bg-purple-600 text-white'
-                            : ev.diasRestantes <= 2
-                            ? 'bg-purple-200 text-purple-900 font-bold'
-                            : 'bg-slate-200 text-slate-700'
-                        }`}
-                      >
-                        {ev.diasRestantes === 0 ? '¡Sale Hoy!' : `En ${ev.diasRestantes} días`}
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-slate-600 leading-snug">
-                      {ev.descripcion}
-                    </p>
-
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium pt-1 border-t border-purple-100">
-                      <span>{ev.area}</span>
-                      <span className="font-mono text-purple-700 font-bold">
-                        {ev.fechaEvento}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {/* Encabezado tipo pizarra física: COLABORADOR | INICIO | FIN | INGRESA.
+              INGRESA resaltada en ámbar: es la columna que realmente hay que decidir de un vistazo. */}
+          <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] sm:grid-cols-[2fr_1fr_1fr_1fr] gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-3 bg-slate-50 border-b-2 border-amber-200">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+              Colaborador
+            </span>
+            <span className="text-center text-[10px] font-black text-slate-500 uppercase tracking-wider">
+              Inicio
+            </span>
+            <span className="text-center text-[10px] font-black text-slate-500 uppercase tracking-wider">
+              Fin
+            </span>
+            <span className="text-center text-[10px] font-black text-amber-700 uppercase tracking-wider">
+              Ingresa
+            </span>
           </div>
 
-          {/* Columna 2: Próximos a retornar / subir a mina */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-            <div className="p-3.5 bg-gradient-to-r from-cyan-950 to-slate-900 text-white flex items-center justify-between border-b border-cyan-900/40">
-              <div className="flex items-center space-x-2">
-                <Briefcase className="w-4 h-4 text-cyan-300" />
-                <h3 className="text-xs font-black tracking-wide">
-                  PRÓXIMOS A SUBIR A MINA
-                </h3>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 text-[10px] font-bold border border-cyan-500/30">
-                {proximosRetornoMina.length}
-              </span>
+          {filasPizarra.length === 0 ? (
+            <div className="text-center py-14 text-slate-400 text-xs">
+              <CheckCircle2 className="w-6 h-6 mx-auto mb-1.5 text-slate-300" />
+              No hay colaboradores con periodos 30x10 registrados.
             </div>
-
-            <div className="p-3 flex-1 overflow-y-auto max-h-[440px] space-y-2.5">
-              {proximosRetornoMina.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 text-xs">
-                  <Clock className="w-6 h-6 mx-auto mb-1.5 text-slate-300" />
-                  No hay retornos de descanso en los próximos 7 días.
-                </div>
-              ) : (
-                proximosRetornoMina.map((ev) => (
-                  <div
-                    key={ev.id}
-                    className="p-3 rounded-xl border border-cyan-100 bg-cyan-50/40 hover:bg-cyan-50/80 transition shadow-sm space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 truncate">
-                        {ev.nombres}
-                      </span>
-                      <span
-                        className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
-                          ev.tipo === 'RETORNO_HOY'
-                            ? 'bg-emerald-600 text-white'
-                            : ev.diasRestantes === 0
-                            ? 'bg-cyan-600 text-white'
-                            : ev.diasRestantes <= 2
-                            ? 'bg-cyan-200 text-cyan-900 font-bold'
-                            : 'bg-slate-200 text-slate-700'
-                        }`}
-                      >
-                        {ev.tipo === 'RETORNO_HOY'
-                          ? '¡Ya en mina hoy!'
-                          : ev.diasRestantes === 0
-                          ? 'Retorna mañana'
-                          : `Retorna en ${ev.diasRestantes + 1} días`}
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-slate-600 leading-snug">
-                      {ev.descripcion}
-                    </p>
-
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium pt-1 border-t border-cyan-100">
-                      <span>{ev.area}</span>
-                      <span className="font-mono text-cyan-700 font-bold">
-                        {ev.fechaEvento}
-                      </span>
+          ) : (
+            filasPizarra.map((fila, idx) => {
+              const ingresaProximo =
+                fila.ingresa >= fechaReferencia &&
+                fila.ingresa <= sumarDiasIso(fechaReferencia, 1);
+              // Urgente > en descanso > en mina, igual criterio que la app móvil
+              const colorEstado = ingresaProximo
+                ? 'text-emerald-600'
+                : fila.enDescanso
+                ? 'text-violet-600'
+                : 'text-amber-600';
+              const colorPunto = ingresaProximo
+                ? 'bg-emerald-500'
+                : fila.enDescanso
+                ? 'bg-violet-500'
+                : 'bg-amber-500';
+              return (
+                <div
+                  key={fila.trabajadorId}
+                  className={`grid grid-cols-[1.6fr_1fr_1fr_1fr] sm:grid-cols-[2fr_1fr_1fr_1fr] gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 items-center ${
+                    idx !== filasPizarra.length - 1 ? 'border-b border-rose-200/60' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${colorPunto}`} />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 truncate">{fila.nombres}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{fila.area}</p>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Columna 3: Ventas de Descanso y Excepciones */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-            <div className="p-3.5 bg-gradient-to-r from-emerald-950 to-slate-900 text-white flex items-center justify-between border-b border-emerald-900/40">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="w-4 h-4 text-emerald-300" />
-                <h3 className="text-xs font-black tracking-wide">
-                  VENTAS DE DESCANSO ACTIVAS
-                </h3>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 text-[10px] font-bold border border-emerald-500/30">
-                {ventasActivas.length}
-              </span>
-            </div>
-
-            <div className="p-3 flex-1 overflow-y-auto max-h-[440px] space-y-2.5">
-              {ventasActivas.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 text-xs">
-                  <CheckCircle2 className="w-6 h-6 mx-auto mb-1.5 text-slate-300" />
-                  No hay ventas de descanso registradas en la ventana actual.
+                  <span className="text-center text-xs font-semibold text-slate-700 font-mono">
+                    {formatFechaPizarra(fila.inicio)}
+                  </span>
+                  <span className="text-center text-xs font-semibold text-slate-700 font-mono">
+                    {formatFechaPizarra(fila.fin)}
+                  </span>
+                  <span className={`text-center text-xs font-black font-mono ${colorEstado}`}>
+                    {formatFechaPizarra(fila.ingresa)}
+                  </span>
                 </div>
-              ) : (
-                ventasActivas.map((ev) => (
-                  <div
-                    key={ev.id}
-                    className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50/80 transition shadow-sm space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 truncate">
-                        {ev.nombres}
-                      </span>
-                      <span
-                        className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
-                          ev.diasRestantes === 0
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-emerald-200 text-emerald-900'
-                        }`}
-                      >
-                        {ev.diasRestantes === 0 ? 'Activa Hoy' : `En ${ev.diasRestantes} días`}
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-slate-600 leading-snug">
-                      {ev.descripcion}
-                    </p>
-
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium pt-1 border-t border-emerald-100">
-                      <span>{ev.area}</span>
-                      <span className="font-mono text-emerald-700 font-bold">
-                        {ev.fechaEvento}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+              );
+            })
+          )}
         </div>
       )}
     </div>
